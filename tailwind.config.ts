@@ -1,5 +1,4 @@
 import type { Config } from 'tailwindcss'
-import rtl from 'tailwindcss-rtl'
 
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
@@ -109,7 +108,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [rtl],
+  plugins: [],
 }
 
 export default config

@@ -1,4 +1,4 @@
-import { Variants } from 'framer-motion'
+import { Variants, TargetAndTransition } from 'framer-motion'
 
 /** Fade up — default entrance for content blocks */
 export const fadeUp: Variants = {
@@ -57,7 +57,7 @@ export const revealFromBottom: Variants = {
 }
 
 /** Float — continuous subtle float for decorative elements */
-export const float = {
+export const float: { animate: TargetAndTransition } = {
   animate: {
     y: [0, -8, 0],
     transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
