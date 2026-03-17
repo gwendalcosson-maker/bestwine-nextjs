@@ -2,20 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Custom scrollbar — premium wine style */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #F8F4EF;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #C97D4E;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #8B4513;
+  }
+
+  /* Selection */
+  ::selection {
+    background: rgba(201, 169, 110, 0.3);
+    color: #2C1810;
+  }
+
+  /* Body defaults */
+  body {
+    @apply bg-bg text-text-main font-inter antialiased;
+  }
+
+  /* CJK */
+  :lang(zh) body {
+    line-height: 1.7;
+    word-break: break-all;
+  }
+  :lang(ja) body {
+    line-height: 1.8;
+    word-break: break-all;
+  }
+
+  /* RTL */
+  [dir="rtl"] body {
+    font-family: var(--font-noto-arabic), sans-serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Grain texture overlay — applies to any element */
+  .grain-overlay {
+    position: relative;
+  }
+  .grain-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    @apply bg-white/60 backdrop-blur-md border border-white/40;
+    box-shadow: 0 8px 32px rgba(44, 24, 16, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* Gold shimmer accent line */
+  .shimmer-line {
+    background: linear-gradient(90deg, transparent, #C9A96E, transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Animated gradient border */
+  .gradient-border {
+    position: relative;
+    background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, #C9A96E, #C97D4E, #8B4513) border-box;
+    border: 1px solid transparent;
+  }
+
+  /* Focus rings with brand color */
+  .focus-wine:focus-visible {
+    @apply outline-none ring-2 ring-secondary/60 ring-offset-2;
+  }
+
+  /* Link underline animation */
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-px bg-secondary transition-all duration-300;
+  }
+  .link-underline:hover::after {
+    @apply w-full;
+  }
 }
