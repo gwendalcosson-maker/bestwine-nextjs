@@ -29,6 +29,42 @@ SELECT c.id, 'en-us', 'Whisky', 'The finest whiskies on Michelin-starred restaur
 FROM categories c WHERE c.slug = 'whisky'
 ON CONFLICT (category_id, locale) DO NOTHING;
 
+-- FR translations for remaining categories
+INSERT INTO category_translations (category_id, locale, name, description, meta_title, meta_description)
+SELECT c.id, 'fr', 'Vin rouge', 'Les meilleurs vins rouges à la carte des restaurants étoilés Michelin.',
+  'Vin rouge : les meilleures bouteilles à la carte des restaurants étoilés',
+  'Découvrez les meilleurs vins rouges référencés à la carte des grands restaurants gastronomiques étoilés Michelin.'
+FROM categories c WHERE c.slug = 'vin-rouge'
+ON CONFLICT (category_id, locale) DO NOTHING;
+
+INSERT INTO category_translations (category_id, locale, name, description, meta_title, meta_description)
+SELECT c.id, 'fr', 'Vin blanc', 'Les meilleurs vins blancs à la carte des restaurants étoilés Michelin.',
+  'Vin blanc : les meilleures bouteilles à la carte des restaurants étoilés',
+  'Découvrez les meilleurs vins blancs référencés à la carte des grands restaurants gastronomiques étoilés Michelin.'
+FROM categories c WHERE c.slug = 'vin-blanc'
+ON CONFLICT (category_id, locale) DO NOTHING;
+
+INSERT INTO category_translations (category_id, locale, name, description, meta_title, meta_description)
+SELECT c.id, 'fr', 'Champagne', 'Les meilleurs champagnes à la carte des restaurants étoilés Michelin.',
+  'Champagne : les meilleures cuvées à la carte des restaurants étoilés',
+  'Découvrez les meilleurs champagnes référencés à la carte des grands restaurants gastronomiques étoilés Michelin.'
+FROM categories c WHERE c.slug = 'champagne'
+ON CONFLICT (category_id, locale) DO NOTHING;
+
+INSERT INTO category_translations (category_id, locale, name, description, meta_title, meta_description)
+SELECT c.id, 'fr', 'Cognac', 'Les meilleurs cognacs à la carte des restaurants étoilés Michelin.',
+  'Cognac : les meilleures bouteilles à la carte des restaurants étoilés',
+  'Découvrez les meilleurs cognacs référencés à la carte des grands restaurants gastronomiques étoilés Michelin.'
+FROM categories c WHERE c.slug = 'cognac'
+ON CONFLICT (category_id, locale) DO NOTHING;
+
+INSERT INTO category_translations (category_id, locale, name, description, meta_title, meta_description)
+SELECT c.id, 'fr', 'Rhum', 'Les meilleurs rhums à la carte des restaurants étoilés Michelin.',
+  'Rhum : les meilleures bouteilles à la carte des restaurants étoilés',
+  'Découvrez les meilleurs rhums référencés à la carte des grands restaurants gastronomiques étoilés Michelin.'
+FROM categories c WHERE c.slug = 'rhum'
+ON CONFLICT (category_id, locale) DO NOTHING;
+
 -- Sample restaurant
 INSERT INTO restaurants (name, slug, country, city, michelin_stars) VALUES
   ('Le Jules Verne', 'le-jules-verne', 'France', 'Paris', 1)
