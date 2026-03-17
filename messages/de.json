@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "categories": "Kategorien",
+    "restaurants": "Restaurants",
+    "search": "Suchen"
+  },
+  "home": {
+    "title": "Die besten Weine & Spirituosen aus Michelin-Sterne-Restaurants",
+    "subtitle": "Entdecken Sie die wichtigsten Referenzen auf den Weinkarten der besten Michelin-Sterne-Restaurants",
+    "cta_explore": "Kategorien erkunden",
+    "cta_restaurants": "Restaurants ansehen"
+  },
+  "category": {
+    "drinks_count": "{count, plural, =0 {Keine Referenzen} =1 {1 Referenz} other {# Referenzen}}",
+    "restaurants_count": "{count, plural, =0 {Keine Restaurants} =1 {1 Restaurant} other {# Restaurants}}",
+    "find_buy": "Finden & Kaufen"
+  },
+  "restaurant": {
+    "wine_list_title": "Weinkarte des Restaurants {name}",
+    "michelin_stars": "{count, plural, =1 {1 Michelin-Stern} other {# Michelin-Sterne}}",
+    "wine_list_subtitle": "Auswahl von Weinen und Spirituosen auf der Karte"
+  },
+  "drink": {
+    "vintage": "Jahrgang {year}",
+    "find_buy": "Finden & Kaufen",
+    "producer": "Produzent",
+    "region": "Region",
+    "appellation": "Appellation"
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Ein Fehler ist aufgetreten",
+    "back": "Zurück",
+    "see_all": "Alle ansehen",
+    "stars": "{count} Michelin-Stern{count, plural, =1 {} other {e}}"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

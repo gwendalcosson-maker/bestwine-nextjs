@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "categories": "Catégories",
+    "restaurants": "Restaurants",
+    "search": "Rechercher"
+  },
+  "home": {
+    "title": "Les meilleurs vins & spiritueux des restaurants étoilés",
+    "subtitle": "Découvrez les références incontournables à la carte des plus grands restaurants gastronomiques Michelin",
+    "cta_explore": "Explorer les catégories",
+    "cta_restaurants": "Voir les restaurants"
+  },
+  "category": {
+    "drinks_count": "{count, plural, =0 {Aucune référence} =1 {1 référence} other {# références}}",
+    "restaurants_count": "{count, plural, =0 {Aucun restaurant} =1 {1 restaurant} other {# restaurants}}",
+    "find_buy": "Trouver & Acheter"
+  },
+  "restaurant": {
+    "wine_list_title": "Carte des vins du Restaurant {name}",
+    "michelin_stars": "{count, plural, =1 {1 étoile Michelin} other {# étoiles Michelin}}",
+    "wine_list_subtitle": "Sélection de vins et spiritueux référencés à la carte"
+  },
+  "drink": {
+    "vintage": "Millésime {year}",
+    "find_buy": "Trouver & Acheter",
+    "producer": "Producteur",
+    "region": "Région",
+    "appellation": "Appellation"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "back": "Retour",
+    "see_all": "Voir tout",
+    "stars": "{count} étoile{count, plural, =1 {} other {s}} Michelin"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

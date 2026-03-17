@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "categories": "カテゴリー",
+    "restaurants": "レストラン",
+    "search": "検索"
+  },
+  "home": {
+    "title": "ミシュランスター付きレストランの最高級ワインとスピリッツ",
+    "subtitle": "世界最高峰のミシュラン星付きレストランのワインリストから、厳選された銘柄を発見",
+    "cta_explore": "カテゴリーを探す",
+    "cta_restaurants": "レストランを見る"
+  },
+  "category": {
+    "drinks_count": "{count}件の参照",
+    "restaurants_count": "{count}件のレストラン",
+    "find_buy": "探して購入"
+  },
+  "restaurant": {
+    "wine_list_title": "レストラン{name}のワインリスト",
+    "michelin_stars": "ミシュラン{count}つ星",
+    "wine_list_subtitle": "ワインリスト掲載のワイン・スピリッツセレクション"
+  },
+  "drink": {
+    "vintage": "{year}年ヴィンテージ",
+    "find_buy": "探して購入",
+    "producer": "生産者",
+    "region": "地域",
+    "appellation": "アペラシオン"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "back": "戻る",
+    "see_all": "すべて見る",
+    "stars": "ミシュラン{count}つ星"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

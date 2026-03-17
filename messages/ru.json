@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "Главная",
+    "categories": "Категории",
+    "restaurants": "Рестораны",
+    "search": "Поиск"
+  },
+  "home": {
+    "title": "Лучшие вина и спиртные напитки ресторанов со звёздами Мишлен",
+    "subtitle": "Откройте для себя обязательные позиции из винных карт лучших гастрономических ресторанов Мишлен",
+    "cta_explore": "Изучить категории",
+    "cta_restaurants": "Смотреть рестораны"
+  },
+  "category": {
+    "drinks_count": "{count} ссылок",
+    "restaurants_count": "{count} ресторанов",
+    "find_buy": "Найти и купить"
+  },
+  "restaurant": {
+    "wine_list_title": "Винная карта ресторана {name}",
+    "michelin_stars": "{count} звезда{count, plural, =1 {} =2 {ы} =3 {ы} other {}} Мишлен",
+    "wine_list_subtitle": "Выбор вин и спиртных напитков в карте"
+  },
+  "drink": {
+    "vintage": "Урожай {year}",
+    "find_buy": "Найти и купить",
+    "producer": "Производитель",
+    "region": "Регион",
+    "appellation": "Апелласьон"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Произошла ошибка",
+    "back": "Назад",
+    "see_all": "Смотреть всё",
+    "stars": "{count} звезда Мишлен"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

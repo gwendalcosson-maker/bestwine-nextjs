@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "categories": "Categorías",
+    "restaurants": "Restaurantes",
+    "search": "Buscar"
+  },
+  "home": {
+    "title": "Los mejores vinos y licores de los restaurantes con estrellas Michelin",
+    "subtitle": "Descubre las referencias imprescindibles en las cartas de los grandes restaurantes gastronómicos Michelin",
+    "cta_explore": "Explorar categorías",
+    "cta_restaurants": "Ver restaurantes"
+  },
+  "category": {
+    "drinks_count": "{count, plural, =0 {Sin referencias} =1 {1 referencia} other {# referencias}}",
+    "restaurants_count": "{count, plural, =0 {Sin restaurantes} =1 {1 restaurante} other {# restaurantes}}",
+    "find_buy": "Encontrar y Comprar"
+  },
+  "restaurant": {
+    "wine_list_title": "Carta de vinos del Restaurante {name}",
+    "michelin_stars": "{count, plural, =1 {1 estrella Michelin} other {# estrellas Michelin}}",
+    "wine_list_subtitle": "Selección de vinos y licores en la carta"
+  },
+  "drink": {
+    "vintage": "Cosecha {year}",
+    "find_buy": "Encontrar y Comprar",
+    "producer": "Productor",
+    "region": "Región",
+    "appellation": "Denominación"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "back": "Volver",
+    "see_all": "Ver todo",
+    "stars": "{count} estrella{count, plural, =1 {} other {s}} Michelin"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

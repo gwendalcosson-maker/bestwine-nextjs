@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "首页",
+    "categories": "分类",
+    "restaurants": "餐厅",
+    "search": "搜索"
+  },
+  "home": {
+    "title": "米其林星级餐厅的顶级葡萄酒与烈酒",
+    "subtitle": "探索世界顶级米其林星级美食餐厅酒单上的必备佳酿",
+    "cta_explore": "浏览分类",
+    "cta_restaurants": "查看餐厅"
+  },
+  "category": {
+    "drinks_count": "{count}个参考",
+    "restaurants_count": "{count}家餐厅",
+    "find_buy": "查找与购买"
+  },
+  "restaurant": {
+    "wine_list_title": "{name}餐厅酒单",
+    "michelin_stars": "{count}颗米其林星",
+    "wine_list_subtitle": "酒单精选葡萄酒与烈酒"
+  },
+  "drink": {
+    "vintage": "{year}年份",
+    "find_buy": "查找与购买",
+    "producer": "生产商",
+    "region": "产区",
+    "appellation": "法定产区"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "back": "返回",
+    "see_all": "查看全部",
+    "stars": "{count}颗米其林星"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

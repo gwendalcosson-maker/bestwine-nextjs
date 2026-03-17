@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "Home",
+    "categories": "Categorie",
+    "restaurants": "Ristoranti",
+    "search": "Cerca"
+  },
+  "home": {
+    "title": "I migliori vini e distillati dei ristoranti stellati Michelin",
+    "subtitle": "Scopri i riferimenti imprescindibili nelle carte dei vini dei più grandi ristoranti gastronomici Michelin",
+    "cta_explore": "Esplora le categorie",
+    "cta_restaurants": "Vedi ristoranti"
+  },
+  "category": {
+    "drinks_count": "{count, plural, =0 {Nessun riferimento} =1 {1 riferimento} other {# riferimenti}}",
+    "restaurants_count": "{count, plural, =0 {Nessun ristorante} =1 {1 ristorante} other {# ristoranti}}",
+    "find_buy": "Trova e Acquista"
+  },
+  "restaurant": {
+    "wine_list_title": "Carta dei vini del Ristorante {name}",
+    "michelin_stars": "{count, plural, =1 {1 stella Michelin} other {# stelle Michelin}}",
+    "wine_list_subtitle": "Selezione di vini e distillati in carta"
+  },
+  "drink": {
+    "vintage": "Annata {year}",
+    "find_buy": "Trova e Acquista",
+    "producer": "Produttore",
+    "region": "Regione",
+    "appellation": "Denominazione"
+  },
+  "common": {
+    "loading": "Caricamento...",
+    "error": "Si è verificato un errore",
+    "back": "Indietro",
+    "see_all": "Vedi tutto",
+    "stars": "{count} stella{count, plural, =1 {} other {e}} Michelin"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}

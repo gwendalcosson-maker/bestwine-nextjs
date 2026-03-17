@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "categories": "الفئات",
+    "restaurants": "المطاعم",
+    "search": "بحث"
+  },
+  "home": {
+    "title": "أفضل النبيذ والمشروبات الروحية من مطاعم نجوم ميشلان",
+    "subtitle": "اكتشف المراجع الأساسية في قوائم النبيذ بأعظم المطاعم الفاخرة الحاصلة على نجوم ميشلان",
+    "cta_explore": "استكشاف الفئات",
+    "cta_restaurants": "عرض المطاعم"
+  },
+  "category": {
+    "drinks_count": "{count} مرجع",
+    "restaurants_count": "{count} مطعم",
+    "find_buy": "ابحث واشترِ"
+  },
+  "restaurant": {
+    "wine_list_title": "قائمة نبيذ مطعم {name}",
+    "michelin_stars": "{count} نجمة ميشلان",
+    "wine_list_subtitle": "تشكيلة من النبيذ والمشروبات الروحية في القائمة"
+  },
+  "drink": {
+    "vintage": "موسم {year}",
+    "find_buy": "ابحث واشترِ",
+    "producer": "المنتج",
+    "region": "المنطقة",
+    "appellation": "التسمية"
+  },
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "حدث خطأ",
+    "back": "رجوع",
+    "see_all": "عرض الكل",
+    "stars": "{count} نجمة ميشلان"
+  },
+  "seo": {
+    "site_name": "Bestwine",
+    "separator": " — "
+  }
+}
