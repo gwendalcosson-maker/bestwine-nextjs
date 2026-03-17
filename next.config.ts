@@ -1,3 +1,4 @@
+// Note: Next.js 16 was installed (create-next-app@latest), compatible with Next.js 15 App Router API
 // next.config.ts
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
