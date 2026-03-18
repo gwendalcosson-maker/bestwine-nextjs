@@ -9,7 +9,11 @@
     "title": "Los mejores vinos y licores de los restaurantes con estrellas Michelin",
     "subtitle": "Descubre las referencias imprescindibles en las cartas de los grandes restaurantes gastronómicos Michelin",
     "cta_explore": "Explorar categorías",
-    "cta_restaurants": "Ver restaurantes"
+    "cta_restaurants": "Ver restaurantes",
+    "explore_by_category": "Explorar por categoría",
+    "trust_restaurants": "Restaurantes con estrellas Michelin",
+    "trust_references": "Referencias de vinos y licores",
+    "trust_languages": "Idiomas disponibles"
   },
   "category": {
     "drinks_count": "{count, plural, =0 {Sin referencias} =1 {1 referencia} other {# referencias}}",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "Carta de vinos del Restaurante {name}",
     "michelin_stars": "{count, plural, =1 {1 estrella Michelin} other {# estrellas Michelin}}",
-    "wine_list_subtitle": "Selección de vinos y licores en la carta"
+    "wine_list_subtitle": "Selección de vinos y licores en la carta",
+    "empty_wine_list": "Aún no hay vinos listados.",
+    "references_count": "{count, plural, =0 {Sin referencias} =1 {1 referencia} other {# referencias}}"
   },
   "drink": {
     "vintage": "Cosecha {year}",
@@ -34,6 +40,19 @@
     "back": "Volver",
     "see_all": "Ver todo",
     "stars": "{count} estrella{count, plural, =1 {} other {s}} Michelin"
+  },
+  "footer": {
+    "description": "Los mejores vinos y licores de las cartas de restaurantes con estrellas Michelin.",
+    "alcohol_warning": "Beba con responsabilidad. Debe tener la edad legal para beber.",
+    "legal_notices": "Aviso legal",
+    "privacy_policy": "Política de privacidad"
+  },
+  "categories_page": {
+    "title": "Todas las categorías",
+    "subtitle": "Explora todas las categorías de vinos y licores presentes en las cartas de restaurantes con estrellas Michelin.",
+    "meta_description": "Explora todas las categorías de vinos y licores presentes en las cartas de restaurantes con estrellas Michelin.",
+    "empty": "No hay categorías disponibles por el momento.",
+    "explore_category": "Explorar"
   },
   "seo": {
     "site_name": "Bestwine",

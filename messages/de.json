@@ -9,7 +9,11 @@
     "title": "Die besten Weine & Spirituosen aus Michelin-Sterne-Restaurants",
     "subtitle": "Entdecken Sie die wichtigsten Referenzen auf den Weinkarten der besten Michelin-Sterne-Restaurants",
     "cta_explore": "Kategorien erkunden",
-    "cta_restaurants": "Restaurants ansehen"
+    "cta_restaurants": "Restaurants ansehen",
+    "explore_by_category": "Nach Kategorie erkunden",
+    "trust_restaurants": "Michelin-Sterne-Restaurants",
+    "trust_references": "Wein- & Spirituosen-Referenzen",
+    "trust_languages": "Verfügbare Sprachen"
   },
   "category": {
     "drinks_count": "{count, plural, =0 {Keine Referenzen} =1 {1 Referenz} other {# Referenzen}}",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "Weinkarte des Restaurants {name}",
     "michelin_stars": "{count, plural, =1 {1 Michelin-Stern} other {# Michelin-Sterne}}",
-    "wine_list_subtitle": "Auswahl von Weinen und Spirituosen auf der Karte"
+    "wine_list_subtitle": "Auswahl von Weinen und Spirituosen auf der Karte",
+    "empty_wine_list": "Noch keine Weine gelistet.",
+    "references_count": "{count, plural, =0 {Keine Referenzen} =1 {1 Referenz} other {# Referenzen}}"
   },
   "drink": {
     "vintage": "Jahrgang {year}",
@@ -34,6 +40,19 @@
     "back": "Zurück",
     "see_all": "Alle ansehen",
     "stars": "{count} Michelin-Stern{count, plural, =1 {} other {e}}"
+  },
+  "footer": {
+    "description": "Die besten Weine und Spirituosen aus den Weinkarten von Michelin-Sterne-Restaurants.",
+    "alcohol_warning": "Trinken Sie verantwortungsvoll. Mindestalter beachten.",
+    "legal_notices": "Impressum",
+    "privacy_policy": "Datenschutz"
+  },
+  "categories_page": {
+    "title": "Alle Kategorien",
+    "subtitle": "Entdecken Sie alle Wein- und Spirituosenkategorien aus den Weinkarten von Michelin-Sterne-Restaurants.",
+    "meta_description": "Entdecken Sie alle Wein- und Spirituosenkategorien aus den Weinkarten von Michelin-Sterne-Restaurants.",
+    "empty": "Noch keine Kategorien verfügbar.",
+    "explore_category": "Erkunden"
   },
   "seo": {
     "site_name": "Bestwine",

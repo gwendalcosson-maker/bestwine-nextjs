@@ -9,8 +9,37 @@ export interface DrinkCardProps {
   locale: string
 }
 
-function buildShoppingUrl(name: string, vintage?: number | null): string {
-  const query = [name, vintage ? String(vintage) : null, 'acheter']
+const shoppingSearchTerm: Record<string, string> = {
+  fr: 'acheter',
+  'en-us': 'buy',
+  'en-gb': 'buy',
+  es: 'comprar',
+  de: 'kaufen',
+  it: 'comprare',
+  pt: 'comprar',
+  zh: '购买',
+  ja: '購入',
+  ru: 'купить',
+  ar: 'شراء',
+}
+
+const shoppingLabel: Record<string, string> = {
+  fr: 'Trouver en boutique',
+  'en-us': 'Find in store',
+  'en-gb': 'Find in store',
+  es: 'Encontrar en tienda',
+  de: 'Im Laden finden',
+  it: 'Trova in negozio',
+  pt: 'Encontrar na loja',
+  zh: '查找店铺',
+  ja: '店舗で探す',
+  ru: 'Найти в магазине',
+  ar: 'ابحث في المتجر',
+}
+
+function buildShoppingUrl(name: string, locale: string, vintage?: number | null): string {
+  const searchTerm = shoppingSearchTerm[locale] ?? 'buy'
+  const query = [name, vintage ? String(vintage) : null, searchTerm]
     .filter(Boolean)
     .join(' ')
   return `https://www.google.com/search?q=${encodeURIComponent(query).replace(/%20/g, '+')}&tbm=shop`
@@ -24,7 +53,9 @@ export default function DrinkCard({
   appellation,
   locale,
 }: DrinkCardProps) {
-  const shoppingUrl = buildShoppingUrl(name, vintage)
+  const shoppingUrl = buildShoppingUrl(name, locale, vintage)
+  const label = shoppingLabel[locale] ?? 'Find in store'
+  const ariaLabel = `${label} — ${name}${vintage ? ' ' + vintage : ''}`
 
   return (
     <AnimatedSection animation="scaleIn">
@@ -83,14 +114,14 @@ export default function DrinkCard({
               link-underline focus-wine
               group-hover:text-secondary transition-colors duration-fast
             "
-            aria-label={`Acheter ${name}${vintage ? ' ' + vintage : ''} sur Google Shopping`}
+            aria-label={ariaLabel}
           >
             <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
               <line x1="3" y1="6" x2="21" y2="6" />
               <path d="M16 10a4 4 0 01-8 0" />
             </svg>
-            Trouver en boutique
+            {label}
           </a>
         </div>
       </article>

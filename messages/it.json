@@ -9,7 +9,11 @@
     "title": "I migliori vini e distillati dei ristoranti stellati Michelin",
     "subtitle": "Scopri i riferimenti imprescindibili nelle carte dei vini dei più grandi ristoranti gastronomici Michelin",
     "cta_explore": "Esplora le categorie",
-    "cta_restaurants": "Vedi ristoranti"
+    "cta_restaurants": "Vedi ristoranti",
+    "explore_by_category": "Esplora per categoria",
+    "trust_restaurants": "Ristoranti stellati Michelin",
+    "trust_references": "Riferimenti di vini e distillati",
+    "trust_languages": "Lingue disponibili"
   },
   "category": {
     "drinks_count": "{count, plural, =0 {Nessun riferimento} =1 {1 riferimento} other {# riferimenti}}",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "Carta dei vini del Ristorante {name}",
     "michelin_stars": "{count, plural, =1 {1 stella Michelin} other {# stelle Michelin}}",
-    "wine_list_subtitle": "Selezione di vini e distillati in carta"
+    "wine_list_subtitle": "Selezione di vini e distillati in carta",
+    "empty_wine_list": "Nessun vino elencato al momento.",
+    "references_count": "{count, plural, =0 {Nessun riferimento} =1 {1 riferimento} other {# riferimenti}}"
   },
   "drink": {
     "vintage": "Annata {year}",
@@ -34,6 +40,19 @@
     "back": "Indietro",
     "see_all": "Vedi tutto",
     "stars": "{count} stella{count, plural, =1 {} other {e}} Michelin"
+  },
+  "footer": {
+    "description": "I migliori vini e distillati dalle carte dei vini dei ristoranti stellati Michelin.",
+    "alcohol_warning": "Bevi responsabilmente. Età legale richiesta.",
+    "legal_notices": "Note legali",
+    "privacy_policy": "Politica sulla privacy"
+  },
+  "categories_page": {
+    "title": "Tutte le categorie",
+    "subtitle": "Scopri tutte le categorie di vini e distillati presenti nelle carte dei ristoranti stellati Michelin.",
+    "meta_description": "Scopri tutte le categorie di vini e distillati presenti nelle carte dei ristoranti stellati Michelin.",
+    "empty": "Nessuna categoria disponibile al momento.",
+    "explore_category": "Esplora"
   },
   "seo": {
     "site_name": "Bestwine",

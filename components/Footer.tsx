@@ -9,6 +9,7 @@ import { fadeUp, staggerContainer } from '@/lib/animations'
 export default function Footer() {
   const locale = useLocale()
   const t = useTranslations('nav')
+  const tFooter = useTranslations('footer')
   const year = new Date().getFullYear()
   const ref = useRef<HTMLElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-60px' })
@@ -36,9 +37,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-3 text-sm text-white/50 font-inter leading-relaxed max-w-xs">
-              {locale === 'fr'
-                ? 'Les meilleures références de vins et spiritueux à la carte des restaurants étoilés Michelin.'
-                : 'The finest wines and spirits from Michelin-starred restaurant wine lists.'}
+              {tFooter('description')}
             </p>
           </motion.div>
 
@@ -81,20 +80,24 @@ export default function Footer() {
               Legal
             </h3>
             <p className="text-xs text-white/40 font-inter leading-relaxed">
-              {locale === 'fr'
-                ? "L'abus d'alcool est dangereux pour la santé. À consommer avec modération."
-                : 'Drink responsibly. Must be of legal drinking age.'}
+              {tFooter('alcohol_warning')}
             </p>
             <ul className="mt-3 space-y-2">
               <li>
-                <span className="text-sm text-white/40 font-inter">
-                  {locale === 'fr' ? 'Mentions légales' : 'Legal notices'}
-                </span>
+                <Link
+                  href={`/${locale}/mentions-legales`}
+                  className="text-sm text-white/40 font-inter hover:text-white transition-colors duration-normal"
+                >
+                  {tFooter('legal_notices')}
+                </Link>
               </li>
               <li>
-                <span className="text-sm text-white/40 font-inter">
-                  {locale === 'fr' ? 'Politique de confidentialité' : 'Privacy policy'}
-                </span>
+                <Link
+                  href={`/${locale}/confidentialite`}
+                  className="text-sm text-white/40 font-inter hover:text-white transition-colors duration-normal"
+                >
+                  {tFooter('privacy_policy')}
+                </Link>
               </li>
             </ul>
           </motion.div>

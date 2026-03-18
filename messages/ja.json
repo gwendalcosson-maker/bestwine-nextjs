@@ -9,7 +9,11 @@
     "title": "ミシュランスター付きレストランの最高級ワインとスピリッツ",
     "subtitle": "世界最高峰のミシュラン星付きレストランのワインリストから、厳選された銘柄を発見",
     "cta_explore": "カテゴリーを探す",
-    "cta_restaurants": "レストランを見る"
+    "cta_restaurants": "レストランを見る",
+    "explore_by_category": "カテゴリーで探す",
+    "trust_restaurants": "ミシュラン星付きレストラン",
+    "trust_references": "ワイン・スピリッツの参照",
+    "trust_languages": "対応言語"
   },
   "category": {
     "drinks_count": "{count}件の参照",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "レストラン{name}のワインリスト",
     "michelin_stars": "ミシュラン{count}つ星",
-    "wine_list_subtitle": "ワインリスト掲載のワイン・スピリッツセレクション"
+    "wine_list_subtitle": "ワインリスト掲載のワイン・スピリッツセレクション",
+    "empty_wine_list": "まだワインが登録されていません。",
+    "references_count": "{count}件の参照"
   },
   "drink": {
     "vintage": "{year}年ヴィンテージ",
@@ -34,6 +40,19 @@
     "back": "戻る",
     "see_all": "すべて見る",
     "stars": "ミシュラン{count}つ星"
+  },
+  "footer": {
+    "description": "ミシュラン星付きレストランのワインリストから厳選された最高級のワインとスピリッツ。",
+    "alcohol_warning": "お酒は適量を。法定年齢を遵守してください。",
+    "legal_notices": "法的事項",
+    "privacy_policy": "プライバシーポリシー"
+  },
+  "categories_page": {
+    "title": "全カテゴリー",
+    "subtitle": "ミシュラン星付きレストランのワインリストに掲載されている全てのワイン・スピリッツカテゴリーを探索。",
+    "meta_description": "ミシュラン星付きレストランのワインリストに掲載されている全てのワイン・スピリッツカテゴリーを探索。",
+    "empty": "カテゴリーはまだありません。",
+    "explore_category": "探索する"
   },
   "seo": {
     "site_name": "Bestwine",

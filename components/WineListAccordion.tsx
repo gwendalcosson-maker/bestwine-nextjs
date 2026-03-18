@@ -1,21 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import DrinkCard from '@/components/DrinkCard'
+import type { WineListEntry, Drink, Category } from '@/lib/types'
 
-interface WineListItem {
-  id: number
-  price: number | null
-  price_currency: string | null
-  drinks: {
-    id: number
-    name: string
-    producer: string | null
-    vintage: number | null
-    region: string | null
-    appellation: string | null
-    categories: { slug: string }
-  }
+interface WineListDrink extends Pick<Drink, 'id' | 'name' | 'producer' | 'vintage' | 'region' | 'appellation'> {
+  categories: Pick<Category, 'slug'>
+}
+
+interface WineListItem extends Pick<WineListEntry, 'id' | 'price' | 'price_currency'> {
+  drinks: WineListDrink
 }
 
 interface WineListAccordionProps {
@@ -24,6 +19,7 @@ interface WineListAccordionProps {
 }
 
 export default function WineListAccordion({ entries, locale }: WineListAccordionProps) {
+  const t = useTranslations('restaurant')
   // Group by category
   const grouped = entries.reduce<Record<string, WineListItem[]>>((acc, entry) => {
     const cat = entry.drinks.categories?.slug ?? 'other'
@@ -47,7 +43,7 @@ export default function WineListAccordion({ entries, locale }: WineListAccordion
   if (entries.length === 0) {
     return (
       <p className="text-muted text-center py-12 font-inter">
-        {locale === 'fr' ? 'Aucun vin référencé pour le moment.' : 'No wines listed yet.'}
+        {t('empty_wine_list')}
       </p>
     )
   }
@@ -67,7 +63,7 @@ export default function WineListAccordion({ entries, locale }: WineListAccordion
             </span>
             <div className="flex items-center gap-3">
               <span className="text-xs font-inter text-muted">
-                {grouped[cat].length} référence{grouped[cat].length > 1 ? 's' : ''}
+                {t('references_count', { count: grouped[cat].length })}
               </span>
               <svg
                 width="16" height="16" viewBox="0 0 24 24" fill="none"

@@ -114,7 +114,7 @@ export default function HomePage() {
               {tNav('categories')}
             </span>
             <h2 className="mt-3 text-3xl lg:text-4xl font-playfair font-bold text-text-main">
-              {locale === 'fr' ? 'Explorer par catégorie' : 'Explore by category'}
+              {t('explore_by_category')}
             </h2>
             <div className="mt-4 mx-auto shimmer-line h-px w-24" />
           </div>
@@ -149,15 +149,15 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
               <div>
                 <p className="text-3xl font-playfair font-bold text-primary">100+</p>
-                <p className="mt-1 text-sm text-muted">{locale === 'fr' ? 'Restaurants étoilés' : 'Michelin-starred restaurants'}</p>
+                <p className="mt-1 text-sm text-muted">{t('trust_restaurants')}</p>
               </div>
               <div>
                 <p className="text-3xl font-playfair font-bold text-primary">1000+</p>
-                <p className="mt-1 text-sm text-muted">{locale === 'fr' ? 'Références de vins & spiritueux' : 'Wine & spirits references'}</p>
+                <p className="mt-1 text-sm text-muted">{t('trust_references')}</p>
               </div>
               <div>
                 <p className="text-3xl font-playfair font-bold text-primary">10</p>
-                <p className="mt-1 text-sm text-muted">{locale === 'fr' ? 'Langues disponibles' : 'Languages available'}</p>
+                <p className="mt-1 text-sm text-muted">{t('trust_languages')}</p>
               </div>
             </div>
           </AnimatedSection>

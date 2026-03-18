@@ -9,7 +9,11 @@
     "title": "米其林星级餐厅的顶级葡萄酒与烈酒",
     "subtitle": "探索世界顶级米其林星级美食餐厅酒单上的必备佳酿",
     "cta_explore": "浏览分类",
-    "cta_restaurants": "查看餐厅"
+    "cta_restaurants": "查看餐厅",
+    "explore_by_category": "按分类浏览",
+    "trust_restaurants": "米其林星级餐厅",
+    "trust_references": "葡萄酒与烈酒参考",
+    "trust_languages": "可用语言"
   },
   "category": {
     "drinks_count": "{count}个参考",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "{name}餐厅酒单",
     "michelin_stars": "{count}颗米其林星",
-    "wine_list_subtitle": "酒单精选葡萄酒与烈酒"
+    "wine_list_subtitle": "酒单精选葡萄酒与烈酒",
+    "empty_wine_list": "暂无葡萄酒列表。",
+    "references_count": "{count}个参考"
   },
   "drink": {
     "vintage": "{year}年份",
@@ -34,6 +40,19 @@
     "back": "返回",
     "see_all": "查看全部",
     "stars": "{count}颗米其林星"
+  },
+  "footer": {
+    "description": "米其林星级餐厅酒单上最优质的葡萄酒与烈酒。",
+    "alcohol_warning": "请负责任地饮酒。须达到法定饮酒年龄。",
+    "legal_notices": "法律声明",
+    "privacy_policy": "隐私政策"
+  },
+  "categories_page": {
+    "title": "所有分类",
+    "subtitle": "探索米其林星级餐厅酒单上的所有葡萄酒与烈酒分类。",
+    "meta_description": "探索米其林星级餐厅酒单上的所有葡萄酒与烈酒分类。",
+    "empty": "暂无分类。",
+    "explore_category": "浏览"
   },
   "seo": {
     "site_name": "Bestwine",

@@ -9,7 +9,11 @@
     "title": "Les meilleurs vins & spiritueux des restaurants étoilés",
     "subtitle": "Découvrez les références incontournables à la carte des plus grands restaurants gastronomiques Michelin",
     "cta_explore": "Explorer les catégories",
-    "cta_restaurants": "Voir les restaurants"
+    "cta_restaurants": "Voir les restaurants",
+    "explore_by_category": "Explorer par catégorie",
+    "trust_restaurants": "Restaurants étoilés",
+    "trust_references": "Références de vins & spiritueux",
+    "trust_languages": "Langues disponibles"
   },
   "category": {
     "drinks_count": "{count, plural, =0 {Aucune référence} =1 {1 référence} other {# références}}",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "Carte des vins du Restaurant {name}",
     "michelin_stars": "{count, plural, =1 {1 étoile Michelin} other {# étoiles Michelin}}",
-    "wine_list_subtitle": "Sélection de vins et spiritueux référencés à la carte"
+    "wine_list_subtitle": "Sélection de vins et spiritueux référencés à la carte",
+    "empty_wine_list": "Aucun vin référencé pour le moment.",
+    "references_count": "{count, plural, =0 {Aucune référence} =1 {1 référence} other {# références}}"
   },
   "drink": {
     "vintage": "Millésime {year}",
@@ -34,6 +40,19 @@
     "back": "Retour",
     "see_all": "Voir tout",
     "stars": "{count} étoile{count, plural, =1 {} other {s}} Michelin"
+  },
+  "footer": {
+    "description": "Les meilleures références de vins et spiritueux à la carte des restaurants étoilés Michelin.",
+    "alcohol_warning": "L'abus d'alcool est dangereux pour la santé. À consommer avec modération.",
+    "legal_notices": "Mentions légales",
+    "privacy_policy": "Politique de confidentialité"
+  },
+  "categories_page": {
+    "title": "Toutes les catégories",
+    "subtitle": "Explorez toutes les catégories de vins et spiritueux référencés à la carte des restaurants étoilés Michelin.",
+    "meta_description": "Explorez toutes les catégories de vins et spiritueux référencés à la carte des restaurants étoilés Michelin.",
+    "empty": "Aucune catégorie disponible pour le moment.",
+    "explore_category": "Explorer"
   },
   "seo": {
     "site_name": "Bestwine",

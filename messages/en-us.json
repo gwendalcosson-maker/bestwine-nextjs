@@ -9,7 +9,11 @@
     "title": "The finest wines & spirits from Michelin-starred restaurants",
     "subtitle": "Discover the must-have references on the wine lists of the world's greatest Michelin-starred restaurants",
     "cta_explore": "Explore categories",
-    "cta_restaurants": "See restaurants"
+    "cta_restaurants": "See restaurants",
+    "explore_by_category": "Explore by category",
+    "trust_restaurants": "Michelin-starred restaurants",
+    "trust_references": "Wine & spirits references",
+    "trust_languages": "Languages available"
   },
   "category": {
     "drinks_count": "{count, plural, =0 {No references} =1 {1 reference} other {# references}}",
@@ -19,7 +23,9 @@
   "restaurant": {
     "wine_list_title": "Wine List at Restaurant {name}",
     "michelin_stars": "{count, plural, =1 {1 Michelin star} other {# Michelin stars}}",
-    "wine_list_subtitle": "Selection of wines and spirits featured on the wine list"
+    "wine_list_subtitle": "Selection of wines and spirits featured on the wine list",
+    "empty_wine_list": "No wines listed yet.",
+    "references_count": "{count, plural, =0 {No references} =1 {1 reference} other {# references}}"
   },
   "drink": {
     "vintage": "Vintage {year}",
@@ -34,6 +40,19 @@
     "back": "Back",
     "see_all": "See all",
     "stars": "{count} Michelin star{count, plural, =1 {} other {s}}"
+  },
+  "footer": {
+    "description": "The finest wines and spirits from Michelin-starred restaurant wine lists.",
+    "alcohol_warning": "Drink responsibly. Must be of legal drinking age.",
+    "legal_notices": "Legal notices",
+    "privacy_policy": "Privacy policy"
+  },
+  "categories_page": {
+    "title": "All categories",
+    "subtitle": "Explore all wine and spirits categories featured on Michelin-starred restaurant wine lists.",
+    "meta_description": "Explore all wine and spirits categories featured on Michelin-starred restaurant wine lists.",
+    "empty": "No categories available yet.",
+    "explore_category": "Explore"
   },
   "seo": {
     "site_name": "Bestwine",
