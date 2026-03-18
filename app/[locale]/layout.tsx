@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation'
 import { playfair, inter, notoSansSC, notoSansJP, notoNaskhArabic } from '@/app/fonts'
 import { locales, type Locale } from '@/i18n'
 import { isRtlLocale, getCjkLocale } from '@/lib/utils'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import '@/app/globals.css'
 
 export async function generateStaticParams() {
@@ -44,9 +46,13 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={isRtl ? 'rtl' : 'ltr'} className={fontClass}>
-      <body>
+      <body className="flex flex-col min-h-screen">
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <Header />
+          <main className="flex-1 pt-16 lg:pt-20">
+            {children}
+          </main>
+          <Footer />
         </NextIntlClientProvider>
       </body>
     </html>
