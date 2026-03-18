@@ -64,7 +64,7 @@ describe('Revalidation API', () => {
     })
     const response = await POST(request)
     expect(response.status).toBe(200)
-    expect(revalidateTag).toHaveBeenCalledWith('drinks', { expire: 0 })
+    expect(revalidateTag).toHaveBeenCalledWith('drinks')
   })
 
   it('accepts valid path revalidation', async () => {

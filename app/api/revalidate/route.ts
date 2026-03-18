@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      revalidateTag(tag, { expire: 0 })
+      revalidateTag(tag)
       return NextResponse.json({ revalidated: true, tag })
     }
 
