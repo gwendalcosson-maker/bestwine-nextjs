@@ -15,6 +15,18 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "index, follow" }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/:path((?!fr|en-us|en-gb|es|de|it|pt|zh|ja|ru|ar|api|_next).*)",
+      "destination": "/fr/:path"
     }
   ]
 }

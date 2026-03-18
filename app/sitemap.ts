@@ -12,7 +12,17 @@ const RESTAURANT_SLUGS = ['le-jules-verne']
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = []
   for (const locale of locales) {
-    entries.push({ url: `${BASE_URL}/${locale}`, lastModified: new Date(), changeFrequency: 'weekly', priority: 1.0 })
+    entries.push({
+      url: `${BASE_URL}/${locale}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 1.0,
+      alternates: {
+        languages: Object.fromEntries(
+          locales.map(l => [l, `${BASE_URL}/${l}`])
+        ),
+      },
+    })
     for (const cat of CATEGORY_SLUGS) {
       entries.push({ url: `${BASE_URL}/${locale}/${cat}`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 })
       const subs = SUBCATEGORY_MAP[cat]
