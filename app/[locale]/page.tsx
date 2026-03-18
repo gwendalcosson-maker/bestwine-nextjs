@@ -1,7 +1,34 @@
+import type { Metadata } from 'next'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useLocale } from 'next-intl'
 import AnimatedSection from '@/components/AnimatedSection'
+import JsonLd from '@/components/JsonLd'
+import { generateWebSiteSchema, generateOrganizationSchema } from '@/lib/schema'
+import { generateAlternateLinks, generateCanonicalUrl } from '@/lib/seo'
+
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  const title = locale === 'fr'
+    ? 'Bestwine : les meilleurs vins & spiritueux des restaurants étoilés Michelin'
+    : 'Bestwine: the finest wines & spirits from Michelin-starred restaurants'
+  const description = locale === 'fr'
+    ? 'Découvrez les références incontournables de vins et spiritueux à la carte des plus grands restaurants Michelin.'
+    : 'Discover the must-have wines and spirits featured on the world\'s finest Michelin-starred restaurant wine lists.'
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: generateCanonicalUrl(locale, ''),
+      languages: generateAlternateLinks(''),
+    },
+    openGraph: { title, description, type: 'website', locale, siteName: 'Bestwine Online' },
+    twitter: { card: 'summary_large_image', title, description },
+  }
+}
 
 export default function HomePage() {
   const t = useTranslations('home')
@@ -19,6 +46,8 @@ export default function HomePage() {
 
   return (
     <div className="grain-overlay">
+      <JsonLd data={generateWebSiteSchema()} />
+      <JsonLd data={generateOrganizationSchema()} />
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-hero min-h-[85vh] flex items-center">
         {/* Decorative elements */}
