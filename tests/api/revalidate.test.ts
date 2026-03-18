@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock next/cache
 vi.mock('next/cache', () => ({
+  updateTag: vi.fn(),
   revalidateTag: vi.fn(),
   revalidatePath: vi.fn(),
 }))
@@ -52,7 +53,7 @@ describe('Revalidation API', () => {
   })
 
   it('accepts valid tag revalidation', async () => {
-    const { revalidateTag } = await import('next/cache')
+    const { updateTag } = await import('next/cache')
     const { POST } = await import('@/app/api/revalidate/route')
     const request = new Request('http://localhost/api/revalidate', {
       method: 'POST',
@@ -64,7 +65,7 @@ describe('Revalidation API', () => {
     })
     const response = await POST(request)
     expect(response.status).toBe(200)
-    expect(revalidateTag).toHaveBeenCalledWith('drinks')
+    expect(updateTag).toHaveBeenCalledWith('drinks')
   })
 
   it('accepts valid path revalidation', async () => {
