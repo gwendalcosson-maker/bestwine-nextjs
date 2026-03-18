@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { useState } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import LanguageSwitcher from './LanguageSwitcher'
 
 export default function Header() {
@@ -23,6 +23,9 @@ export default function Header() {
 
   return (
     <motion.header
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
       style={{
         backgroundColor: headerBg,
         backdropFilter: headerBlur,
@@ -33,7 +36,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link href={`/${locale}`} className="flex items-center gap-2 group">
+          <Link href={`/${locale}`} className="flex items-center gap-2 group relative">
             <span className="text-xl lg:text-2xl font-playfair font-bold text-primary tracking-tight
                            group-hover:text-secondary transition-colors duration-normal">
               Bestwine
@@ -42,6 +45,7 @@ export default function Header() {
                            border border-border rounded-full px-2 py-0.5 mt-0.5">
               Online
             </span>
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-gold to-secondary transition-all duration-slow group-hover:w-full" />
           </Link>
 
           {/* Desktop nav */}
@@ -69,42 +73,49 @@ export default function Header() {
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                {mobileMenuOpen ? (
-                  <path d="M6 6l12 12M6 18L18 6" />
-                ) : (
-                  <path d="M3 7h18M3 12h18M3 17h18" />
-                )}
-              </svg>
+              <div className="w-5 h-4 relative flex flex-col justify-between">
+                <span className={`block h-0.5 w-full bg-current rounded transition-all duration-normal ${mobileMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
+                <span className={`block h-0.5 w-full bg-current rounded transition-all duration-normal ${mobileMenuOpen ? 'opacity-0' : ''}`} />
+                <span className={`block h-0.5 w-full bg-current rounded transition-all duration-normal ${mobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
+              </div>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <motion.nav
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="md:hidden bg-surface/95 backdrop-blur-lg border-t border-border/40 pb-4"
-          aria-label="Mobile navigation"
-        >
-          <div className="max-w-7xl mx-auto px-4 pt-2 space-y-1">
-            {navLinks.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-3 text-base font-inter text-text-main/80 hover:text-primary
-                         hover:bg-fog/50 px-3 rounded-lg transition-colors duration-fast"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </motion.nav>
-      )}
+      {/* Mobile menu with AnimatePresence */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.nav
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="md:hidden bg-surface/95 backdrop-blur-xl border-t border-border/40 overflow-hidden"
+            aria-label="Mobile navigation"
+          >
+            <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
+              {navLinks.map((link, i) => (
+                <motion.div
+                  key={link.href}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 + 0.1, duration: 0.3 }}
+                >
+                  <Link
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-3 text-base font-inter text-text-main/80 hover:text-primary
+                             hover:bg-fog/50 px-3 rounded-lg transition-colors duration-fast"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </motion.header>
   )
 }
