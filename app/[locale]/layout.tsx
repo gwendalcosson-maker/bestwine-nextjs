@@ -7,6 +7,7 @@ import { locales, type Locale } from '@/i18n'
 import { isRtlLocale, getCjkLocale } from '@/lib/utils'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import Analytics from '@/components/Analytics'
 import '@/app/globals.css'
 
 export async function generateStaticParams() {
@@ -54,6 +55,7 @@ export default async function LocaleLayout({
           </main>
           <Footer />
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   )

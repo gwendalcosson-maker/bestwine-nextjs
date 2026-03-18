@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'geolocation=(), microphone=(), camera=()' },
           {
             key: 'Content-Security-Policy',
             value: [
@@ -26,6 +27,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://www.googletagmanager.com https://www.google-analytics.com",
               "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com",
               "img-src 'self' data: https://*.supabase.co https://www.google-analytics.com",
+              "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com",
               "style-src 'self' 'unsafe-inline'",
             ].join('; '),
           },
