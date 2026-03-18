@@ -1,0 +1,66 @@
+{
+  "restaurant": {
+    "name": "Le Jules Verne",
+    "country": "France",
+    "city": "Paris",
+    "michelinStars": 1
+  },
+  "yearOnList": 2024,
+  "drinks": [
+    {
+      "name": "Château Margaux",
+      "producer": "Château Margaux",
+      "vintage": 2015,
+      "category": "vin-rouge",
+      "subcategory": "bordeaux",
+      "country": "France",
+      "region": "Bordeaux",
+      "appellation": "Margaux",
+      "price": 850,
+      "currency": "EUR"
+    },
+    {
+      "name": "Dom Pérignon",
+      "producer": "Moët & Chandon",
+      "vintage": 2012,
+      "category": "champagne",
+      "country": "France",
+      "region": "Champagne",
+      "appellation": "Champagne",
+      "price": 320,
+      "currency": "EUR"
+    },
+    {
+      "name": "Macallan 18 Year Old Sherry Oak",
+      "producer": "The Macallan",
+      "vintage": 2004,
+      "category": "whisky",
+      "subcategory": "scotch",
+      "country": "Scotland",
+      "region": "Speyside",
+      "price": 180,
+      "currency": "EUR"
+    },
+    {
+      "name": "Hennessy XO",
+      "producer": "Hennessy",
+      "category": "cognac",
+      "country": "France",
+      "region": "Cognac",
+      "price": 95,
+      "currency": "EUR"
+    },
+    {
+      "name": "Romanée-Conti",
+      "producer": "Domaine de la Romanée-Conti",
+      "vintage": 2018,
+      "category": "vin-rouge",
+      "subcategory": "bourgogne",
+      "country": "France",
+      "region": "Bourgogne",
+      "appellation": "Vosne-Romanée",
+      "price": 4500,
+      "currency": "EUR"
+    }
+  ]
+}
