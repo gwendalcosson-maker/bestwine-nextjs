@@ -67,10 +67,14 @@ export function generateOrganizationSchema() {
 }
 
 export function generateArticleSchema(restaurant: { name: string }, locale: string) {
+  const headline = locale === 'fr'
+    ? `Carte des vins du Restaurant ${restaurant.name}`
+    : `Wine List at Restaurant ${restaurant.name}`
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: `Carte des vins du Restaurant ${restaurant.name}`,
+    headline,
     publisher: { '@type': 'Organization', name: 'Bestwine Online' },
   }
 }

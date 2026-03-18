@@ -3,6 +3,16 @@ import { locales } from '@/i18n'
 
 const BASE_URL = 'https://www.bestwine.online'
 
+// Build full path for a category (handles N-level depth)
+function buildCategoryPath(cat: { slug: string; parent_id: number | null }, allCategories: Array<{ id: number; slug: string; parent_id: number | null }>): string {
+  if (!cat.parent_id) return cat.slug
+
+  const parent = allCategories.find(c => c.id === cat.parent_id)
+  if (!parent) return cat.slug
+
+  return `${buildCategoryPath(parent, allCategories)}/${cat.slug}`
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = []
 
@@ -14,7 +24,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 1,
       alternates: {
-        languages: Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}`])),
+        languages: {
+          ...Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}`])),
+          'x-default': `${BASE_URL}/en-us`,
+        },
       },
     })
   }
@@ -27,7 +40,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.9,
       alternates: {
-        languages: Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/categories`])),
+        languages: {
+          ...Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/categories`])),
+          'x-default': `${BASE_URL}/en-us/categories`,
+        },
       },
     })
   }
@@ -42,11 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (categories) {
       for (const cat of categories) {
-        let path = cat.slug
-        if (cat.parent_id) {
-          const parent = categories.find(c => c.id === cat.parent_id)
-          if (parent) path = `${parent.slug}/${cat.slug}`
-        }
+        const path = buildCategoryPath(cat, categories)
 
         for (const locale of locales) {
           entries.push({
@@ -55,7 +67,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'weekly',
             priority: 0.8,
             alternates: {
-              languages: Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/${path}`])),
+              languages: {
+                ...Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/${path}`])),
+                'x-default': `${BASE_URL}/en-us/${path}`,
+              },
             },
           })
         }
@@ -76,7 +91,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'monthly',
             priority: 0.7,
             alternates: {
-              languages: Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/restaurants/${rest.slug}`])),
+              languages: {
+                ...Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/restaurants/${rest.slug}`])),
+                'x-default': `${BASE_URL}/en-us/restaurants/${rest.slug}`,
+              },
             },
           })
         }
@@ -94,7 +112,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.9,
       alternates: {
-        languages: Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/restaurants`])),
+        languages: {
+          ...Object.fromEntries(locales.map(l => [l, `${BASE_URL}/${l}/restaurants`])),
+          'x-default': `${BASE_URL}/en-us/restaurants`,
+        },
       },
     })
   }

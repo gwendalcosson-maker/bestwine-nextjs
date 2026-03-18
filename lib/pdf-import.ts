@@ -2,6 +2,7 @@
 import { createServiceClient } from './supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Restaurant, Drink, Category } from './types'
+import { slugify } from './utils'
 
 /** Structured data extracted from a PDF wine list */
 export interface ExtractedDrink {
@@ -235,15 +236,6 @@ async function ensureCategory(
   })
 
   return categoryId
-}
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 }
 
 function generateDrinkSlug(drink: ExtractedDrink): string {

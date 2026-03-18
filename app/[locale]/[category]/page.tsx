@@ -10,6 +10,7 @@ import DrinkCard from '@/components/DrinkCard'
 import Breadcrumb from '@/components/Breadcrumb'
 import JsonLd from '@/components/JsonLd'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 
 interface PageParams {
   locale: string
@@ -81,9 +82,10 @@ export default async function CategoryPage({
   const name = translation?.name ?? category
 
   const drinks = await getDrinksByCategory(cat.id, locale)
+  const tNav = await getTranslations({ locale, namespace: 'nav' })
 
   const breadcrumbItems = [
-    { label: locale === 'fr' ? 'Accueil' : 'Home', href: `/${locale}` },
+    { label: tNav('home'), href: `/${locale}` },
     { label: name },
   ]
 

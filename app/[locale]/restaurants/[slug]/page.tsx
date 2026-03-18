@@ -10,6 +10,7 @@ import StarRating from '@/components/StarRating'
 import Breadcrumb from '@/components/Breadcrumb'
 import JsonLd from '@/components/JsonLd'
 import WineListAccordion from '@/components/WineListAccordion'
+import { getTranslations } from 'next-intl/server'
 
 interface PageParams { locale: string; slug: string }
 
@@ -64,9 +65,10 @@ export default async function RestaurantDetailPage({
 
   const translation = restaurant.restaurant_translations[0]
   const wineList = await getWineListForRestaurant(restaurant.id, locale)
+  const tNav = await getTranslations({ locale, namespace: 'nav' })
 
   const breadcrumbItems = [
-    { label: locale === 'fr' ? 'Accueil' : 'Home', href: `/${locale}` },
+    { label: tNav('home'), href: `/${locale}` },
     { label: 'Restaurants', href: `/${locale}/restaurants` },
     { label: restaurant.name },
   ]
