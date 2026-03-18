@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidateTag, revalidatePath } from 'next/cache'
+import { updateTag, revalidatePath } from 'next/cache'
 import { timingSafeEqual } from 'crypto'
 
 /** Validate tag: lowercase alphanumeric + hyphens only, max 50 chars */
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      revalidateTag(tag)
+      updateTag(tag)
       return NextResponse.json({ revalidated: true, tag })
     }
 
