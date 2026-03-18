@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 
-import { Header } from '@/components/layout/Header'
+import Header from '@/components/Header'
 
 describe('Header', () => {
   it('renders the site logo/brand', () => {

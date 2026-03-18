@@ -5,11 +5,14 @@ interface StarRatingProps {
 
 export default function StarRating({ count, className = '' }: StarRatingProps) {
   return (
-    <span className={`inline-flex gap-0.5 ${className}`}>
+    <span
+      className={`inline-flex gap-0.5 ${className}`}
+      role="img"
+      aria-label={`${count} Michelin star${count > 1 ? 's' : ''}`}
+    >
       {Array.from({ length: count }, (_, i) => (
         <svg
           key={i}
-          role="img"
           aria-hidden="true"
           width="16"
           height="16"
