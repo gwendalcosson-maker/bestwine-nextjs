@@ -6,7 +6,9 @@ export interface DrinkCardProps {
   vintage?: number | null
   region?: string | null
   appellation?: string | null
+  country?: string | null
   locale: string
+  restaurantCount?: number
 }
 
 const shoppingSearchTerm: Record<string, string> = {
@@ -24,17 +26,17 @@ const shoppingSearchTerm: Record<string, string> = {
 }
 
 const shoppingLabel: Record<string, string> = {
-  fr: 'Trouver en boutique',
-  'en-us': 'Find in store',
-  'en-gb': 'Find in store',
-  es: 'Encontrar en tienda',
-  de: 'Im Laden finden',
-  it: 'Trova in negozio',
-  pt: 'Encontrar na loja',
-  zh: '查找店铺',
-  ja: '店舗で探す',
-  ru: 'Найти в магазине',
-  ar: 'ابحث في المتجر',
+  fr: 'Trouver & Acheter',
+  'en-us': 'Find & Buy',
+  'en-gb': 'Find & Buy',
+  es: 'Encontrar y Comprar',
+  de: 'Finden & Kaufen',
+  it: 'Trova e Acquista',
+  pt: 'Encontrar e Comprar',
+  zh: '查找并购买',
+  ja: '探して購入',
+  ru: 'Найти и Купить',
+  ar: 'ابحث واشتري',
 }
 
 function buildShoppingUrl(name: string, locale: string, vintage?: number | null): string {
@@ -51,77 +53,93 @@ export default function DrinkCard({
   vintage,
   region,
   appellation,
+  country,
   locale,
+  restaurantCount,
 }: DrinkCardProps) {
   const shoppingUrl = buildShoppingUrl(name, locale, vintage)
-  const label = shoppingLabel[locale] ?? 'Find in store'
+  const label = shoppingLabel[locale] ?? 'Find & Buy'
   const ariaLabel = `${label} — ${name}${vintage ? ' ' + vintage : ''}`
+
+  // Build origin string
+  const originParts = [region, appellation, country].filter(Boolean)
+  const origin = originParts.join(' — ')
 
   return (
     <AnimatedSection animation="scaleIn">
       <article
         className="
           group relative flex flex-col justify-between h-full
-          bg-gradient-card rounded-2xl p-6
-          gradient-border
-          hover:scale-[1.02] hover:shadow-wine
-          transition-all duration-slow ease-wine
-          focus-within:ring-2 focus-within:ring-secondary/60
+          glass-card rounded-xl p-6 lg:p-7
+          card-hover
+          hover:shadow-gold
+          focus-within:ring-2 focus-within:ring-gold/40
         "
       >
-        <div aria-hidden="true" className="absolute inset-0 rounded-2xl grain-overlay pointer-events-none opacity-30" />
-
         <div className="relative z-10">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <h3 className="font-playfair font-semibold text-lg text-text-main leading-tight">
+          {/* Product name */}
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-playfair font-semibold text-lg text-text-main leading-snug">
               {name}
             </h3>
             {vintage && (
-              <span className="shrink-0 text-xs font-inter font-medium text-secondary bg-champagne/60 rounded-full px-2 py-0.5">
+              <span className="shrink-0 text-xs font-playfair font-medium text-gold
+                             bg-gold/[0.08] rounded-full px-2.5 py-1 border border-gold/20">
                 {vintage}
               </span>
             )}
           </div>
 
+          {/* Producer */}
           {producer && (
-            <p className="text-sm font-inter text-muted mb-2">{producer}</p>
+            <p className="text-sm font-inter text-muted mb-1 tracking-wide">{producer}</p>
           )}
 
-          {(region || appellation) && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {region && (
-                <span className="inline-block text-xs font-inter text-text-main bg-fog rounded-full px-2 py-0.5 border border-border/40">
-                  {region}
-                </span>
-              )}
-              {appellation && (
-                <span className="inline-block text-xs font-inter text-text-main bg-fog rounded-full px-2 py-0.5 border border-border/40">
-                  {appellation}
-                </span>
-              )}
-            </div>
+          {/* Origin */}
+          {origin && (
+            <p className="text-xs font-inter text-muted/70 mt-2">{origin}</p>
+          )}
+
+          {/* Restaurant count */}
+          {restaurantCount != null && restaurantCount > 0 && (
+            <p className="mt-3 text-xs font-inter text-gold/80">
+              {locale === 'fr'
+                ? `Servi dans ${restaurantCount} restaurant${restaurantCount > 1 ? 's' : ''}`
+                : `Served in ${restaurantCount} restaurant${restaurantCount > 1 ? 's' : ''}`}
+              {' '}
+              <span className="text-gold" aria-hidden="true">&#9733;</span>
+            </p>
           )}
         </div>
 
-        <div className="relative z-10 mt-5 pt-4 border-t border-border/30">
+        {/* CTA */}
+        <div className="relative z-10 mt-5 pt-4 border-t border-border/20">
           <a
             href={shoppingUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="
-              inline-flex items-center gap-1.5
-              text-xs font-inter font-medium text-primary
+              inline-flex items-center gap-2
+              text-xs font-inter font-medium tracking-wide uppercase
+              text-primary/80
               link-underline focus-wine
-              group-hover:text-secondary transition-colors duration-fast
+              group-hover:text-primary transition-colors duration-normal
             "
             aria-label={ariaLabel}
           >
-            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 01-8 0" />
-            </svg>
             {label}
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="opacity-60 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform duration-fast"
+            >
+              <path d="M7 17L17 7M17 7H7M17 7V17" />
+            </svg>
           </a>
         </div>
       </article>

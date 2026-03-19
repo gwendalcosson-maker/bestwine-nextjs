@@ -11,9 +11,23 @@ export default function Header() {
   const t = useTranslations('nav')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { scrollY } = useScroll()
-  const headerBg = useTransform(scrollY, [0, 100], ['rgba(248, 244, 239, 0)', 'rgba(248, 244, 239, 0.85)'])
-  const headerBlur = useTransform(scrollY, [0, 100], ['blur(0px)', 'blur(12px)'])
-  const headerBorder = useTransform(scrollY, [0, 100], ['rgba(229, 221, 213, 0)', 'rgba(229, 221, 213, 0.6)'])
+
+  const headerBg = useTransform(
+    scrollY,
+    [0, 80],
+    ['rgba(248, 244, 239, 0)', 'rgba(248, 244, 239, 0.92)']
+  )
+  const headerBlur = useTransform(
+    scrollY,
+    [0, 80],
+    ['blur(0px)', 'blur(16px)']
+  )
+  const headerShadow = useTransform(
+    scrollY,
+    [0, 80],
+    ['0 0 0 rgba(0,0,0,0)', '0 4px 30px rgba(44, 24, 16, 0.06)']
+  )
+  const headerHeight = useTransform(scrollY, [0, 80], [80, 64])
 
   const navLinks = [
     { href: `/${locale}`, label: t('home') },
@@ -25,36 +39,41 @@ export default function Header() {
     <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
       style={{
         backgroundColor: headerBg,
         backdropFilter: headerBlur,
-        borderBottomColor: headerBorder,
+        boxShadow: headerShadow,
       }}
-      className="fixed top-0 inset-x-0 z-50 border-b border-transparent transition-shadow"
+      className="fixed top-0 inset-x-0 z-50"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+        <motion.div
+          style={{ height: headerHeight }}
+          className="flex items-center justify-between"
+        >
           {/* Logo */}
-          <Link href={`/${locale}`} className="flex items-center gap-2 group relative">
-            <span className="text-xl lg:text-2xl font-playfair font-bold text-primary tracking-tight
-                           group-hover:text-secondary transition-colors duration-normal">
-              Bestwine
+          <Link href={`/${locale}`} className="flex items-baseline gap-0 group">
+            <span className="text-lg lg:text-xl font-playfair font-bold text-text-main tracking-[0.3em] uppercase
+                           group-hover:text-primary transition-colors duration-slow">
+              BESTWINE
             </span>
-            <span className="hidden sm:inline-block text-[10px] font-inter uppercase tracking-[0.2em] text-muted
-                           border border-border rounded-full px-2 py-0.5 mt-0.5">
-              Online
+            <span className="text-gold mx-1.5 font-playfair text-sm">
+              &#8226;
             </span>
-            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-gold to-secondary transition-all duration-slow group-hover:w-full" />
+            <span className="text-xs font-inter font-light text-muted tracking-[0.2em] uppercase">
+              ONLINE
+            </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
+          <nav className="hidden md:flex items-center gap-10" aria-label="Main navigation">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-inter font-medium text-text-main/80 hover:text-primary
+                className="text-[13px] font-inter font-normal text-text-main/70 hover:text-text-main
+                         tracking-wide uppercase
                          transition-colors duration-normal link-underline"
               >
                 {link.label}
@@ -63,7 +82,7 @@ export default function Header() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <LanguageSwitcher />
 
             {/* Mobile menu button */}
@@ -74,46 +93,74 @@ export default function Header() {
               aria-expanded={mobileMenuOpen}
             >
               <div className="w-5 h-4 relative flex flex-col justify-between">
-                <span className={`block h-0.5 w-full bg-current rounded transition-all duration-normal ${mobileMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
-                <span className={`block h-0.5 w-full bg-current rounded transition-all duration-normal ${mobileMenuOpen ? 'opacity-0' : ''}`} />
-                <span className={`block h-0.5 w-full bg-current rounded transition-all duration-normal ${mobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
+                <span className={`block h-px w-full bg-current transition-all duration-normal ${mobileMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
+                <span className={`block h-px w-full bg-current transition-all duration-normal ${mobileMenuOpen ? 'opacity-0' : ''}`} />
+                <span className={`block h-px w-full bg-current transition-all duration-normal ${mobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
               </div>
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Mobile menu with AnimatePresence */}
+      {/* Mobile slide-in drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.nav
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="md:hidden bg-surface/95 backdrop-blur-xl border-t border-border/40 overflow-hidden"
-            aria-label="Mobile navigation"
-          >
-            <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
-              {navLinks.map((link, i) => (
-                <motion.div
-                  key={link.href}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 + 0.1, duration: 0.3 }}
-                >
-                  <Link
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block py-3 text-base font-inter text-text-main/80 hover:text-primary
-                             hover:bg-fog/50 px-3 rounded-lg transition-colors duration-fast"
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 bg-obsidian/20 backdrop-blur-sm md:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+
+            {/* Drawer from right */}
+            <motion.nav
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed top-0 end-0 bottom-0 w-72 bg-bg/98 backdrop-blur-xl
+                         border-s border-border/30 md:hidden z-50 overflow-y-auto"
+              aria-label="Mobile navigation"
+            >
+              <div className="px-6 pt-24 pb-8 space-y-1">
+                {navLinks.map((link, i) => (
+                  <motion.div
+                    key={link.href}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.08 + 0.2, duration: 0.4 }}
                   >
-                    {link.label}
-                  </Link>
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block py-4 text-base font-playfair text-text-main
+                               border-b border-border/20
+                               hover:text-primary transition-colors duration-fast"
+                    >
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
+
+                {/* Brand in drawer footer */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="pt-12"
+                >
+                  <div className="divider-gold mb-6" />
+                  <p className="text-xs font-inter text-muted tracking-wider uppercase">
+                    BESTWINE <span className="text-gold">&#8226;</span> ONLINE
+                  </p>
                 </motion.div>
-              ))}
-            </div>
-          </motion.nav>
+              </div>
+            </motion.nav>
+          </>
         )}
       </AnimatePresence>
     </motion.header>

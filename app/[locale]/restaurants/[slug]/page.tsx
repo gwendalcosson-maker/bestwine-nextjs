@@ -36,7 +36,7 @@ export async function generateMetadata({
   const title = translation?.meta_title ??
     `Carte des vins du Restaurant ${restaurant.name}${restaurant.city ? ` — ${restaurant.city}` : ''} | Bestwine`
   const description = translation?.meta_description ??
-    `Découvrez la carte des vins du restaurant ${restaurant.name}, ${restaurant.michelin_stars} étoile${restaurant.michelin_stars > 1 ? 's' : ''} Michelin.`
+    `Decouvrez la carte des vins du restaurant ${restaurant.name}, ${restaurant.michelin_stars} etoile${restaurant.michelin_stars > 1 ? 's' : ''} Michelin.`
 
   return {
     title,
@@ -59,6 +59,7 @@ export default async function RestaurantDetailPage({
 }: { params: Promise<PageParams> }) {
   const { locale, slug } = await params
   const isRtl = isRtlLocale(locale)
+  const isFr = locale === 'fr'
 
   const restaurant = await getRestaurantBySlug(slug, locale)
   if (!restaurant) notFound()
@@ -79,65 +80,85 @@ export default async function RestaurantDetailPage({
       <JsonLd data={generateRestaurantSchema(restaurant)} />
       <JsonLd data={generateArticleSchema(restaurant, locale)} />
 
-      {/* Hero */}
-      <section className="relative bg-gradient-hero py-20 lg:py-32">
+      {/* ─── HERO ─── Restaurant name with Michelin stars */}
+      <section className="relative bg-gradient-hero py-24 lg:py-36">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-deep-burgundy/5 rounded-full blur-3xl" />
+          <div className="absolute -top-32 end-0 w-[500px] h-[500px] bg-gold/[0.04] rounded-full blur-[100px]" />
+          <div className="absolute -bottom-40 start-0 w-[600px] h-[600px] bg-deep-burgundy/[0.03] rounded-full blur-[120px]" />
+          {/* Vertical accent line */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-20 bg-gradient-to-b from-transparent via-gold/15 to-transparent" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div className="relative max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <Breadcrumb items={breadcrumbItems} isRtl={isRtl} />
+
           <AnimatedSection animation="fadeUp">
-            <StarRating count={restaurant.michelin_stars} className="mb-4" />
-            <h1 className="font-playfair font-bold text-4xl lg:text-5xl xl:text-6xl text-text-main leading-tight">
-              {locale === 'fr' ? 'Carte des vins du Restaurant' : 'Wine List at Restaurant'}{' '}
-              <span className="text-primary">{restaurant.name}</span>
-            </h1>
-            {restaurant.city && (
-              <p className="mt-3 text-lg font-inter text-muted">
-                {restaurant.city}{restaurant.country ? `, ${restaurant.country}` : ''}
-              </p>
-            )}
+            <div className="max-w-3xl">
+              {/* Michelin stars */}
+              <div className="mb-5">
+                <StarRating count={restaurant.michelin_stars} size="lg" />
+              </div>
+
+              {/* Restaurant name */}
+              <h1 className="font-playfair font-bold text-4xl lg:text-5xl xl:text-6xl text-text-main leading-[1.05] tracking-tight">
+                {restaurant.name}
+              </h1>
+
+              {/* City, Country */}
+              {(restaurant.city || restaurant.country) && (
+                <p className="mt-4 text-lg font-inter font-light text-muted/70 tracking-wide">
+                  {[restaurant.city, restaurant.country].filter(Boolean).join(', ')}
+                </p>
+              )}
+
+              <div className="mt-6 divider-gold !mx-0 !w-16" />
+
+              {/* Expert description */}
+              {translation?.description && (
+                <p className="mt-8 text-base font-inter text-text-main/70 leading-[1.8] max-w-2xl">
+                  {translation.description}
+                </p>
+              )}
+            </div>
           </AnimatedSection>
         </div>
       </section>
 
-      {/* Editorial content */}
-      {(translation?.description || translation?.wine_list_critique) && (
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-          {translation.description && (
-            <AnimatedSection animation="fadeUp">
-              <p className="text-lg text-text-main leading-relaxed font-inter">
-                {translation.description}
-              </p>
-            </AnimatedSection>
-          )}
-          {translation.wine_list_critique && (
-            <AnimatedSection animation="fadeUp" delay={0.2}>
-              <blockquote className="mt-8 relative pl-6 border-l-2 border-gold/60">
-                <div className="absolute -left-3 top-0 w-6 h-6 bg-gold/20 rounded-full blur-sm" />
-                <p className="text-base text-text-main/80 leading-relaxed italic font-inter">
-                  {translation.wine_list_critique}
-                </p>
-                <footer className="mt-3 text-xs font-inter text-muted uppercase tracking-wider">
-                  — Critique sommelier Bestwine
-                </footer>
+      {/* ─── WINE LIST CRITIQUE ─── Sommelier editorial */}
+      {translation?.wine_list_critique && (
+        <section className="bg-obsidian-gradient grain-overlay relative py-20 lg:py-28">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-12 bg-gradient-to-b from-gold/25 to-transparent" />
+          </div>
+
+          <AnimatedSection animation="fadeUp">
+            <div className="relative max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
+              <blockquote className="text-lg lg:text-xl font-playfair font-normal text-white/75 leading-relaxed italic">
+                &ldquo;{translation.wine_list_critique}&rdquo;
               </blockquote>
-            </AnimatedSection>
-          )}
+              <div className="mt-8 divider-gold" />
+              <p className="mt-5 text-[11px] font-inter uppercase tracking-[0.3em] text-gold/50">
+                {isFr ? 'Critique sommelier' : 'Sommelier Review'} &mdash; Bestwine
+              </p>
+            </div>
+          </AnimatedSection>
         </section>
       )}
 
-      {/* Wine list accordion */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      {/* ─── WINE LIST ─── Grouped by category */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
         <AnimatedSection animation="fadeUp">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="shimmer-line h-px w-8" />
-            <h2 className="font-playfair font-semibold text-2xl text-text-main">
-              {locale === 'fr' ? 'Sélection de la carte' : 'Wine list selection'}
-            </h2>
+          <div className="flex items-center gap-3 mb-10">
+            <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
+              {isFr ? 'Carte des vins' : 'Wine List'}
+            </span>
+            <div className="divider-gold !mx-0 !w-12" />
           </div>
+          <h2 className="font-playfair font-bold text-2xl lg:text-3xl text-text-main tracking-tight mb-10">
+            {isFr ? 'Selection de la carte' : 'Wine List Selection'}
+          </h2>
         </AnimatedSection>
+
         <WineListAccordion entries={wineList as any} locale={locale} />
       </section>
     </div>

@@ -34,7 +34,7 @@ import Header from '@/components/Header'
 describe('Header', () => {
   it('renders the site logo/brand', () => {
     render(<Header />)
-    expect(screen.getByText('Bestwine')).toBeDefined()
+    expect(screen.getByText('BESTWINE')).toBeDefined()
   })
 
   it('renders navigation links', () => {

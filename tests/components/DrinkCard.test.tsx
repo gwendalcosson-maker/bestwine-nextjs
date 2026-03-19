@@ -35,8 +35,9 @@ describe('DrinkCard', () => {
 
   it('renders region and appellation', () => {
     render(<DrinkCard {...baseProps} region="Speyside" appellation="Single Malt" />)
-    expect(screen.getByText('Speyside')).toBeInTheDocument()
-    expect(screen.getByText('Single Malt')).toBeInTheDocument()
+    // Origin is now combined into a single string
+    expect(screen.getByText(/Speyside/)).toBeInTheDocument()
+    expect(screen.getByText(/Single Malt/)).toBeInTheDocument()
   })
 
   it('renders a Google Shopping CTA link with correct URL', () => {

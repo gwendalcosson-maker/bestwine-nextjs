@@ -20,6 +20,8 @@ interface WineListAccordionProps {
 
 export default function WineListAccordion({ entries, locale }: WineListAccordionProps) {
   const t = useTranslations('restaurant')
+  const isFr = locale === 'fr'
+
   // Group by category
   const grouped = entries.reduce<Record<string, WineListItem[]>>((acc, entry) => {
     const cat = entry.drinks.categories?.slug ?? 'other'
@@ -42,61 +44,70 @@ export default function WineListAccordion({ entries, locale }: WineListAccordion
 
   if (entries.length === 0) {
     return (
-      <p className="text-muted text-center py-12 font-inter">
-        {t('empty_wine_list')}
-      </p>
+      <div className="text-center py-16 glass-card rounded-xl">
+        <p className="text-muted font-inter">
+          {t('empty_wine_list')}
+        </p>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {categoryNames.map(cat => (
-        <div key={cat} className="border border-border/40 rounded-xl overflow-hidden">
-          <button
-            onClick={() => toggleSection(cat)}
-            className="w-full flex items-center justify-between px-6 py-4 bg-fog/30
-                     hover:bg-fog/60 transition-colors duration-fast text-left"
-            aria-expanded={openSections.has(cat)}
-          >
-            <span className="font-playfair font-semibold text-text-main capitalize">
-              {cat.replace(/-/g, ' ')}
-            </span>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-inter text-muted">
-                {t('references_count', { count: grouped[cat].length })}
-              </span>
-              <svg
-                width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2"
-                className={`transition-transform duration-fast ${openSections.has(cat) ? 'rotate-180' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-          </button>
-          {openSections.has(cat) && (
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-slide-down">
-              {grouped[cat].map(entry => (
-                <div key={entry.id} className="relative">
-                  <DrinkCard
-                    name={entry.drinks.name}
-                    producer={entry.drinks.producer}
-                    vintage={entry.drinks.vintage}
-                    region={entry.drinks.region}
-                    appellation={entry.drinks.appellation}
-                    locale={locale}
-                  />
-                  {entry.price && (
-                    <div className="absolute top-3 right-3 z-20 bg-primary/90 text-white text-xs font-inter font-medium rounded-full px-2.5 py-1">
-                      {entry.price} {entry.price_currency ?? '€'}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+    <div className="space-y-4">
+      {categoryNames.map(cat => {
+        const isOpen = openSections.has(cat)
+        return (
+          <div key={cat} className="rounded-xl overflow-hidden border border-border/15 bg-white/40">
+            <button
+              onClick={() => toggleSection(cat)}
+              className="w-full flex items-center justify-between px-7 py-5
+                       hover:bg-fog/40 transition-colors duration-fast text-start"
+              aria-expanded={isOpen}
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-playfair font-semibold text-lg text-text-main capitalize">
+                  {cat.replace(/-/g, ' ')}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-[11px] font-inter text-muted/60 uppercase tracking-wider">
+                  {t('references_count', { count: grouped[cat].length })}
+                </span>
+                <span
+                  className={`text-gold text-lg font-light transition-transform duration-normal
+                            ${isOpen ? 'rotate-45' : 'rotate-0'}`}
+                >
+                  +
+                </span>
+              </div>
+            </button>
+
+            {isOpen && (
+              <div className="px-7 pb-7 pt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-slide-down">
+                {grouped[cat].map(entry => (
+                  <div key={entry.id} className="relative">
+                    <DrinkCard
+                      name={entry.drinks.name}
+                      producer={entry.drinks.producer}
+                      vintage={entry.drinks.vintage}
+                      region={entry.drinks.region}
+                      appellation={entry.drinks.appellation}
+                      locale={locale}
+                    />
+                    {entry.price && (
+                      <div className="absolute top-3 end-3 z-20
+                                    bg-obsidian/80 text-champagne text-xs font-inter font-medium
+                                    rounded-full px-3 py-1 backdrop-blur-sm">
+                        {entry.price} {entry.price_currency ?? '\u20AC'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

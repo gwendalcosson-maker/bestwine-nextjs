@@ -104,4 +104,57 @@
   .link-underline:hover::after {
     @apply w-full;
   }
+
+  /* Luxury heading */
+  .heading-luxury {
+    @apply font-playfair text-text-main tracking-tight;
+  }
+
+  /* Gold text accent */
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #C9A96E, #8B4513);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Section divider */
+  .divider-gold {
+    @apply mx-auto;
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #C9A96E, transparent);
+  }
+
+  /* Premium card hover */
+  .card-hover {
+    @apply transition-all duration-slow ease-wine;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 shadow-deep;
+  }
+
+  /* Full bleed section */
+  .section-editorial {
+    @apply max-w-3xl mx-auto px-6 leading-relaxed text-text-main/80;
+  }
+
+  /* Gold gradient CTA button */
+  .btn-gold {
+    @apply inline-flex items-center gap-2 px-8 py-4 rounded-full
+           font-inter font-medium text-sm
+           transition-all duration-normal;
+    background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, #C9A96E, #C97D4E, #8B4513) border-box;
+    border: 1.5px solid transparent;
+    color: #8B4513;
+  }
+  .btn-gold:hover {
+    box-shadow: 0 0 24px rgba(201, 169, 110, 0.3);
+  }
+
+  /* Obsidian section */
+  .bg-obsidian-gradient {
+    background: linear-gradient(160deg, #1A0A0A 0%, #2C1810 50%, #1A0A0A 100%);
+  }
 }
