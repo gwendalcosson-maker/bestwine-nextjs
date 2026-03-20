@@ -18,7 +18,17 @@
   "category": {
     "drinks_count": "{count}个参考",
     "restaurants_count": "{count}家餐厅",
-    "find_buy": "查找与购买"
+    "find_buy": "查找与购买",
+    "table_brand": "品牌",
+    "table_origin": "原产国",
+    "table_vintage": "年份",
+    "table_type": "类型",
+    "table_restaurants": "餐厅",
+    "table_price": "价格",
+    "table_see_price": "查看最优价格",
+    "featured_at": "出现在{count}家星级餐厅的酒单上",
+    "all_references": "所有参考",
+    "selection": "精选"
   },
   "restaurant": {
     "wine_list_title": "{name}餐厅酒单",

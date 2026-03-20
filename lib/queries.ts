@@ -134,6 +134,63 @@ export const getDrinksByCategory = unstable_cache(
   { revalidate: 3600, tags: [TAGS.drinks] }
 )
 
+// Drink with restaurant associations via wine_list_entries
+export type DrinkWithRestaurants = Drink & {
+  drink_translations: DrinkTranslation[]
+  wine_list_entries: Array<{
+    id: number
+    price: number | null
+    price_currency: string | null
+    restaurants: Restaurant & {
+      restaurant_translations: RestaurantTranslation[]
+    }
+  }>
+}
+
+export const getDrinksWithRestaurants = unstable_cache(
+  async (categoryId: number, locale: string, includeChildren: boolean = true): Promise<DrinkWithRestaurants[]> => {
+    // Get category IDs to query (parent + children if includeChildren)
+    let categoryIds = [categoryId]
+
+    if (includeChildren) {
+      const { data: children } = await supabaseAnon
+        .from('categories')
+        .select('id')
+        .eq('parent_id', categoryId)
+      if (children) {
+        categoryIds = [...categoryIds, ...children.map((c: { id: number }) => c.id)]
+      }
+    }
+
+    const { data, error } = await supabaseAnon
+      .from('drinks')
+      .select(`
+        *,
+        drink_translations(*),
+        wine_list_entries(
+          id, price, price_currency,
+          restaurants(*, restaurant_translations(*))
+        )
+      `)
+      .in('category_id', categoryIds)
+      .eq('drink_translations.locale', locale)
+      .eq('wine_list_entries.restaurants.restaurant_translations.locale', locale)
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('[getDrinksWithRestaurants]', error.message)
+      return []
+    }
+
+    // Sort by number of restaurants (descending) — most featured = first
+    const results = (data ?? []) as DrinkWithRestaurants[]
+    results.sort((a, b) => (b.wine_list_entries?.length ?? 0) - (a.wine_list_entries?.length ?? 0))
+    return results
+  },
+  ['getDrinksWithRestaurants'],
+  { revalidate: 3600, tags: [TAGS.drinks, TAGS.wineList] }
+)
+
 export const getRestaurants = unstable_cache(
   async (locale: string): Promise<RestaurantWithTranslation[]> => {
     const { data, error } = await supabaseAnon

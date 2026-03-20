@@ -18,7 +18,17 @@
   "category": {
     "drinks_count": "{count} مرجع",
     "restaurants_count": "{count} مطعم",
-    "find_buy": "ابحث واشترِ"
+    "find_buy": "ابحث واشترِ",
+    "table_brand": "العلامة التجارية",
+    "table_origin": "بلد المنشأ",
+    "table_vintage": "العمر/الموسم",
+    "table_type": "النوع",
+    "table_restaurants": "المطاعم",
+    "table_price": "السعر",
+    "table_see_price": "اعرض أفضل سعر",
+    "featured_at": "في قائمة {count} مطعم نجوم",
+    "all_references": "جميع المراجع",
+    "selection": "اختيار"
   },
   "restaurant": {
     "wine_list_title": "قائمة نبيذ مطعم {name}",

@@ -18,7 +18,17 @@
   "category": {
     "drinks_count": "{count} ссылок",
     "restaurants_count": "{count} ресторанов",
-    "find_buy": "Найти и купить"
+    "find_buy": "Найти и купить",
+    "table_brand": "Марка",
+    "table_origin": "Страна происхождения",
+    "table_vintage": "Возраст/Урожай",
+    "table_type": "Тип",
+    "table_restaurants": "Рестораны",
+    "table_price": "Цена",
+    "table_see_price": "Лучшая цена",
+    "featured_at": "В винной карте {count} ресторанов со звёздами",
+    "all_references": "Все позиции",
+    "selection": "Подборка"
   },
   "restaurant": {
     "wine_list_title": "Винная карта ресторана {name}",

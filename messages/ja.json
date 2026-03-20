@@ -18,7 +18,17 @@
   "category": {
     "drinks_count": "{count}件の参照",
     "restaurants_count": "{count}件のレストラン",
-    "find_buy": "探して購入"
+    "find_buy": "探して購入",
+    "table_brand": "ブランド",
+    "table_origin": "原産国",
+    "table_vintage": "年齢/ヴィンテージ",
+    "table_type": "タイプ",
+    "table_restaurants": "レストラン",
+    "table_price": "価格",
+    "table_see_price": "最安値を見る",
+    "featured_at": "{count}件の星付きレストランのワインリストに掲載",
+    "all_references": "すべての参照",
+    "selection": "セレクション"
   },
   "restaurant": {
     "wine_list_title": "レストラン{name}のワインリスト",

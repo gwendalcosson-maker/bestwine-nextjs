@@ -18,7 +18,17 @@
   "category": {
     "drinks_count": "{count, plural, =0 {Aucune référence} =1 {1 référence} other {# références}}",
     "restaurants_count": "{count, plural, =0 {Aucun restaurant} =1 {1 restaurant} other {# restaurants}}",
-    "find_buy": "Trouver & Acheter"
+    "find_buy": "Trouver & Acheter",
+    "table_brand": "Marque",
+    "table_origin": "Pays d'origine",
+    "table_vintage": "Âge/Millésime",
+    "table_type": "Type",
+    "table_restaurants": "Restaurants",
+    "table_price": "Prix",
+    "table_see_price": "Voir le meilleur prix",
+    "featured_at": "À la carte de {count, plural, =1 {1 restaurant étoilé} other {# restaurants étoilés}}",
+    "all_references": "Toutes les références",
+    "selection": "Sélection"
   },
   "restaurant": {
     "wine_list_title": "Carte des vins du Restaurant {name}",

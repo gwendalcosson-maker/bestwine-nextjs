@@ -2,11 +2,12 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { locales } from '@/i18n'
 import { isRtlLocale } from '@/lib/utils'
-import { getCategories, getCategoryBySlug, getDrinksByCategory } from '@/lib/queries'
+import { getCategories, getCategoryBySlug, getDrinksWithRestaurants } from '@/lib/queries'
+import type { DrinkWithRestaurants } from '@/lib/queries'
 import { generateAlternateLinks, generateCanonicalUrl } from '@/lib/seo'
 import { generateItemListSchema, generateBreadcrumbSchema } from '@/lib/schema'
 import AnimatedSection from '@/components/AnimatedSection'
-import DrinkCard from '@/components/DrinkCard'
+// DrinkCard no longer used — replaced by reference table
 import Breadcrumb from '@/components/Breadcrumb'
 import JsonLd from '@/components/JsonLd'
 import Link from 'next/link'
@@ -207,12 +208,13 @@ export default async function CategoryPage({
   const name = translation?.name ?? category
   const nameLower = name.toLowerCase()
 
-  const drinks = await getDrinksByCategory(cat.id, locale)
+  const drinks = await getDrinksWithRestaurants(cat.id, locale)
   const tNav = await getTranslations({ locale, namespace: 'nav' })
   const tEditorial = await getTranslations({ locale, namespace: 'editorial' })
+  const tCategory = await getTranslations({ locale, namespace: 'category' })
 
-  // Split featured (first 6) and rest
-  const featuredDrinks = drinks.slice(0, 6)
+  // Top 3 by restaurant count = featured "meilleurs"
+  const featuredDrinks = drinks.slice(0, 3)
   const allDrinks = drinks
 
   const breadcrumbItems = [
@@ -391,13 +393,13 @@ export default async function CategoryPage({
         </div>
       </section>
 
-      {/* ─── FEATURED REFERENCES ─── Star products */}
+      {/* ─── FEATURED REFERENCES ─── Top 3 by restaurant endorsements */}
       {featuredDrinks.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
-                Selection
+                {tCategory('selection')}
               </span>
               <div className="divider-gold !mx-0 !w-12" />
             </div>
@@ -407,18 +409,62 @@ export default async function CategoryPage({
           </AnimatedSection>
 
           <AnimatedSection animation="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
-            {featuredDrinks.map((drink) => (
-              <DrinkCard
-                key={drink.id}
-                name={drink.name}
-                producer={drink.producer}
-                vintage={drink.vintage}
-                region={drink.region}
-                appellation={drink.appellation}
-                country={drink.country}
-                locale={locale}
-              />
-            ))}
+            {featuredDrinks.map((drink, rank) => {
+              const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
+              const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
+
+              return (
+                <div key={drink.id} className="glass-card rounded-xl p-6 relative overflow-hidden hover:shadow-gold transition-shadow duration-normal">
+                  {/* Gold ranking number */}
+                  <span className="absolute top-4 end-4 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center font-playfair font-bold text-gold text-lg">
+                    {rank + 1}
+                  </span>
+
+                  <h3 className="font-playfair font-bold text-xl text-text-main pe-12 leading-snug">
+                    {drink.name}
+                  </h3>
+
+                  <div className="mt-3 space-y-1 text-sm font-inter text-text-main/70">
+                    {drink.country && (
+                      <p>{drink.country}{drink.region && ` \u2013 ${drink.region}`}</p>
+                    )}
+                    {drink.vintage && <p>{drink.vintage}</p>}
+                    {drink.appellation && <p>{drink.appellation}</p>}
+                  </div>
+
+                  {restaurants.length > 0 && (
+                    <p className="mt-4 text-sm font-inter font-semibold text-gold">
+                      {tCategory('featured_at', { count: restaurants.length })}
+                    </p>
+                  )}
+
+                  {restaurants.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {restaurants.slice(0, 3).map((rest, j) => (
+                        <div key={j} className="text-xs font-inter text-text-main/60">
+                          <span className="text-gold">{'\u2605'.repeat(rest.michelin_stars)}</span>
+                          {' '}
+                          {rest.name}
+                        </div>
+                      ))}
+                      {restaurants.length > 3 && (
+                        <p className="text-xs text-muted">+{restaurants.length - 3}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <a
+                    href={googleShoppingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 inline-block px-5 py-2.5 rounded-full text-xs font-inter font-semibold uppercase tracking-wider
+                               bg-gradient-gold text-white hover:opacity-90 transition-opacity"
+                  >
+                    {tCategory('find_buy')}
+                  </a>
+                </div>
+              )
+            })}
           </AnimatedSection>
         </section>
       )}
@@ -450,89 +496,150 @@ export default async function CategoryPage({
         </div>
       </section>
 
-      {/* ─── COMPLETE TABLE ─── Full reference list */}
+      {/* ─── REFERENCE TABLE ─── Core of bestwine: sorted by restaurant endorsement count */}
       {allDrinks.length > 0 && (
         <section id="references" className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
-                {locale === 'fr' ? 'Toutes les references' : 'All References'}
+                {tCategory('all_references')}
               </span>
               <div className="flex-1 h-px bg-border/20" />
             </div>
+            <h2 className="font-playfair text-2xl md:text-3xl text-text-main mb-2">
+              {tCategory('drinks_count', { count: allDrinks.length })}
+            </h2>
+            <div className="divider-gold mb-8" />
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp">
             {/* Desktop table */}
-            <div className="hidden md:block overflow-hidden rounded-xl border border-border/20">
+            <div className="hidden lg:block overflow-hidden rounded-xl border border-border/20">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-fog/40 border-b border-border/20">
-                    <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {locale === 'fr' ? 'Nom' : 'Name'}
+                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
+                      {tCategory('table_brand')}
                     </th>
-                    <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {locale === 'fr' ? 'Producteur' : 'Producer'}
+                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
+                      {tCategory('table_origin')}
                     </th>
-                    <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {locale === 'fr' ? 'Origine' : 'Origin'}
+                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
+                      {tCategory('table_vintage')}
                     </th>
-                    <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {locale === 'fr' ? 'Millesime' : 'Vintage'}
+                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
+                      {tCategory('table_type')}
                     </th>
-                    <th className="px-6 py-4"></th>
+                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
+                      {tCategory('table_restaurants')}
+                    </th>
+                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
+                      {tCategory('table_price')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {allDrinks.map((drink, i) => (
-                    <tr
-                      key={drink.id}
-                      className={`border-b border-border/10 transition-colors duration-fast hover:bg-champagne/20
-                                ${i % 2 === 0 ? 'bg-white/40' : 'bg-fog/10'}`}
-                    >
-                      <td className="px-6 py-4 font-playfair font-medium text-text-main">
-                        {drink.name}
-                      </td>
-                      <td className="px-6 py-4 font-inter text-muted">
-                        {drink.producer ?? '\u2014'}
-                      </td>
-                      <td className="px-6 py-4 font-inter text-muted">
-                        {[drink.region, drink.country].filter(Boolean).join(', ') || '\u2014'}
-                      </td>
-                      <td className="px-6 py-4 font-playfair text-gold">
-                        {drink.vintage ?? '\u2014'}
-                      </td>
-                      <td className="px-6 py-4 text-end">
-                        <a
-                          href={`https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-inter font-medium text-primary/70 hover:text-primary
-                                   link-underline transition-colors duration-fast uppercase tracking-wide"
-                        >
-                          {locale === 'fr' ? 'Trouver & Acheter' : 'Find & Buy'}
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
+                  {allDrinks.map((drink, i) => {
+                    const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
+                    const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
+
+                    return (
+                      <tr
+                        key={drink.id}
+                        className={`border-b border-border/10 transition-colors duration-fast hover:bg-champagne/20
+                                  ${i % 2 === 0 ? 'bg-white/40' : 'bg-fog/10'}`}
+                      >
+                        <td className="px-5 py-4 font-playfair font-semibold text-text-main">
+                          {drink.name}
+                        </td>
+                        <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
+                          {drink.country ?? '\u2014'}
+                          {drink.region && ` \u2013 ${drink.region}`}
+                        </td>
+                        <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
+                          {drink.vintage ? `${drink.vintage}` : '\u2014'}
+                        </td>
+                        <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
+                          {drink.appellation ?? '\u2014'}
+                        </td>
+                        <td className="px-5 py-4">
+                          {restaurants.length > 0 ? (
+                            <div className="space-y-1">
+                              {restaurants.map((rest, j) => (
+                                <div key={j} className="text-sm">
+                                  <span className="text-gold">
+                                    {'\u2605'.repeat(rest.michelin_stars)}
+                                  </span>
+                                  {' \u2013 '}
+                                  <Link
+                                    href={`/${locale}/restaurants/${rest.slug}`}
+                                    className="text-secondary hover:text-primary link-underline"
+                                  >
+                                    {rest.name}
+                                  </Link>
+                                  {rest.country && ` \u2013 ${rest.country}`}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted text-sm">\u2014</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <a
+                            href={googleShoppingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-inter font-medium text-secondary hover:text-primary
+                                     link-underline transition-colors duration-fast"
+                          >
+                            {tCategory('table_see_price')}
+                          </a>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile cards */}
-            <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {allDrinks.map((drink) => (
-                <DrinkCard
-                  key={drink.id}
-                  name={drink.name}
-                  producer={drink.producer}
-                  vintage={drink.vintage}
-                  region={drink.region}
-                  appellation={drink.appellation}
-                  country={drink.country}
-                  locale={locale}
-                />
-              ))}
+            <div className="lg:hidden space-y-4">
+              {allDrinks.map((drink) => {
+                const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
+                const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
+
+                return (
+                  <div key={drink.id} className="glass-card rounded-xl p-4">
+                    <h3 className="font-playfair font-semibold text-lg text-text-main">
+                      {drink.name}
+                    </h3>
+                    <div className="mt-2 space-y-1 text-sm text-text-main/70">
+                      {drink.country && <p>{drink.country}{drink.region && ` \u2013 ${drink.region}`}</p>}
+                      {drink.vintage && <p>{drink.vintage}</p>}
+                      {drink.appellation && <p>{drink.appellation}</p>}
+                    </div>
+                    {restaurants.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        {restaurants.map((rest, j) => (
+                          <div key={j} className="text-sm">
+                            <span className="text-gold">{'\u2605'.repeat(rest.michelin_stars)}</span>
+                            {' \u2013 '}
+                            <Link href={`/${locale}/restaurants/${rest.slug}`} className="text-secondary hover:text-primary">
+                              {rest.name}
+                            </Link>
+                            {rest.country && ` \u2013 ${rest.country}`}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <a href={googleShoppingUrl} target="_blank" rel="noopener noreferrer"
+                       className="mt-3 inline-block text-secondary text-sm font-semibold hover:text-primary font-inter">
+                      {tCategory('table_see_price')} &rarr;
+                    </a>
+                  </div>
+                )
+              })}
             </div>
           </AnimatedSection>
         </section>
