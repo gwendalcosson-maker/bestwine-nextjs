@@ -513,9 +513,9 @@ export default async function CategoryPage({
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp">
-            {/* Desktop table */}
-            <div className="hidden lg:block overflow-hidden rounded-xl border border-border/20">
-              <table className="w-full text-sm">
+            {/* Reference table — always visible, scrollable on mobile */}
+            <div className="overflow-x-auto rounded-xl border border-border/20">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead>
                   <tr className="bg-fog/40 border-b border-border/20">
                     <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
@@ -603,44 +603,6 @@ export default async function CategoryPage({
               </table>
             </div>
 
-            {/* Mobile cards */}
-            <div className="lg:hidden space-y-4">
-              {allDrinks.map((drink) => {
-                const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
-                const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
-
-                return (
-                  <div key={drink.id} className="glass-card rounded-xl p-4">
-                    <h3 className="font-playfair font-semibold text-lg text-text-main">
-                      {drink.name}
-                    </h3>
-                    <div className="mt-2 space-y-1 text-sm text-text-main/70">
-                      {drink.country && <p>{drink.country}{drink.region && ` \u2013 ${drink.region}`}</p>}
-                      {drink.vintage && <p>{drink.vintage}</p>}
-                      {drink.appellation && <p>{drink.appellation}</p>}
-                    </div>
-                    {restaurants.length > 0 && (
-                      <div className="mt-3 space-y-1">
-                        {restaurants.map((rest, j) => (
-                          <div key={j} className="text-sm">
-                            <span className="text-gold">{'★'.repeat(rest.michelin_stars)}</span>
-                            {' – '}
-                            <Link href={`/${locale}/restaurants/${rest.slug}`} className="text-secondary hover:text-primary">
-                              {rest.name}
-                            </Link>
-                            {rest.country ? ` – ${rest.country}` : ''}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <a href={googleShoppingUrl} target="_blank" rel="noopener noreferrer"
-                       className="mt-3 inline-block text-secondary text-sm font-semibold hover:text-primary font-inter">
-                      {tCategory('table_see_price')} &rarr;
-                    </a>
-                  </div>
-                )
-              })}
-            </div>
           </AnimatedSection>
         </section>
       )}
