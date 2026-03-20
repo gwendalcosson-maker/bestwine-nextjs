@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  /* Force proper table rendering */
+  table { display: table; width: 100%; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  tbody { display: table-row-group; }
+  tr { display: table-row; }
+  th, td { display: table-cell; vertical-align: top; }
+
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
