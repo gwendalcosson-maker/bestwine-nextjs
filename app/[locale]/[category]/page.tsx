@@ -442,7 +442,7 @@ export default async function CategoryPage({
                     <div className="mt-2 space-y-1">
                       {restaurants.slice(0, 3).map((rest, j) => (
                         <div key={j} className="text-xs font-inter text-text-main/60">
-                          <span className="text-gold">{'\u2605'.repeat(rest.michelin_stars)}</span>
+                          <span className="text-gold">{'★'.repeat(rest.michelin_stars)}</span>
                           {' '}
                           {rest.name}
                         </div>
@@ -553,14 +553,14 @@ export default async function CategoryPage({
                           {drink.name}
                         </td>
                         <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
-                          {drink.country ?? '\u2014'}
-                          {drink.region && ` \u2013 ${drink.region}`}
+                          {drink.country ?? '—'}
+                          {drink.region ? ` – ${drink.region}` : ''}
                         </td>
                         <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
-                          {drink.vintage ? `${drink.vintage}` : '\u2014'}
+                          {drink.vintage ? `${drink.vintage}` : '—'}
                         </td>
                         <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
-                          {drink.appellation ?? '\u2014'}
+                          {drink.appellation ?? '—'}
                         </td>
                         <td className="px-5 py-4">
                           {restaurants.length > 0 ? (
@@ -568,21 +568,21 @@ export default async function CategoryPage({
                               {restaurants.map((rest, j) => (
                                 <div key={j} className="text-sm">
                                   <span className="text-gold">
-                                    {'\u2605'.repeat(rest.michelin_stars)}
+                                    {'★'.repeat(rest.michelin_stars)}
                                   </span>
-                                  {' \u2013 '}
+                                  {' – '}
                                   <Link
                                     href={`/${locale}/restaurants/${rest.slug}`}
                                     className="text-secondary hover:text-primary link-underline"
                                   >
                                     {rest.name}
                                   </Link>
-                                  {rest.country && ` \u2013 ${rest.country}`}
+                                  {rest.country ? ` – ${rest.country}` : ''}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-muted text-sm">\u2014</span>
+                            <span className="text-muted text-sm">—</span>
                           )}
                         </td>
                         <td className="px-5 py-4">
@@ -623,12 +623,12 @@ export default async function CategoryPage({
                       <div className="mt-3 space-y-1">
                         {restaurants.map((rest, j) => (
                           <div key={j} className="text-sm">
-                            <span className="text-gold">{'\u2605'.repeat(rest.michelin_stars)}</span>
-                            {' \u2013 '}
+                            <span className="text-gold">{'★'.repeat(rest.michelin_stars)}</span>
+                            {' – '}
                             <Link href={`/${locale}/restaurants/${rest.slug}`} className="text-secondary hover:text-primary">
                               {rest.name}
                             </Link>
-                            {rest.country && ` \u2013 ${rest.country}`}
+                            {rest.country ? ` – ${rest.country}` : ''}
                           </div>
                         ))}
                       </div>
