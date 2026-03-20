@@ -87,18 +87,48 @@ export const getCategoryBySlug = unstable_cache(
 
 export const getDrinksByCategory = unstable_cache(
   async (categoryId: number, locale: string): Promise<DrinkWithTranslation[]> => {
-    const { data, error } = await supabaseAnon
+    // First get drinks directly in this category
+    const { data: directDrinks, error: directError } = await supabaseAnon
       .from('drinks')
       .select('*, drink_translations(*)')
       .eq('category_id', categoryId)
       .eq('drink_translations.locale', locale)
       .order('name', { ascending: true })
 
-    if (error) {
-      console.error('[getDrinksByCategory]', error.message)
+    if (directError) {
+      console.error('[getDrinksByCategory]', directError.message)
       return []
     }
-    return (data ?? []) as DrinkWithTranslation[]
+
+    // Also get drinks from child categories
+    const { data: childCategories } = await supabaseAnon
+      .from('categories')
+      .select('id')
+      .eq('parent_id', categoryId)
+
+    let childDrinks: DrinkWithTranslation[] = []
+    if (childCategories && childCategories.length > 0) {
+      const childIds = childCategories.map((c: { id: number }) => c.id)
+      const { data: subDrinks, error: subError } = await supabaseAnon
+        .from('drinks')
+        .select('*, drink_translations(*)')
+        .in('category_id', childIds)
+        .eq('drink_translations.locale', locale)
+        .order('name', { ascending: true })
+
+      if (!subError && subDrinks) {
+        childDrinks = subDrinks as DrinkWithTranslation[]
+      }
+    }
+
+    // Merge and deduplicate
+    const allDrinks = [...(directDrinks ?? []) as DrinkWithTranslation[], ...childDrinks]
+    const seen = new Set<number>()
+    return allDrinks.filter(d => {
+      if (seen.has(d.id)) return false
+      seen.add(d.id)
+      return true
+    })
   },
   ['getDrinksByCategory'],
   { revalidate: 3600, tags: [TAGS.drinks] }
