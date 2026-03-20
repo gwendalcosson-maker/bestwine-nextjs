@@ -2,8 +2,8 @@
  * Inject FULL verbatim WordPress editorial content into category_translations.
  *
  * Usage:
- *   NEXT_PUBLIC_SUPABASE_URL=https://tmwxushartfhwgawixqz.supabase.co \
- *   SUPABASE_SERVICE_ROLE_KEY=REDACTED \
+ *   NEXT_PUBLIC_SUPABASE_URL=<your-url> \
+ *   SUPABASE_SERVICE_ROLE_KEY=<your-key> \
  *   npx tsx scripts/inject-editorial.ts
  */
 import { createClient } from '@supabase/supabase-js'
