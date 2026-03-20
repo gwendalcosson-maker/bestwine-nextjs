@@ -1,0 +1,1246 @@
+-- supabase/schema.sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Categories (wine types, spirits, etc.)
+CREATE TABLE IF NOT EXISTS categories (
+  id          SERIAL PRIMARY KEY,
+  slug        VARCHAR(100) NOT NULL UNIQUE,
+  parent_id   INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Category translations (one row per category × locale)
+CREATE TABLE IF NOT EXISTS category_translations (
+  id               SERIAL PRIMARY KEY,
+  category_id      INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  locale           VARCHAR(10) NOT NULL,
+  name             VARCHAR(200) NOT NULL,
+  description      TEXT,
+  meta_title       VARCHAR(200),
+  meta_description VARCHAR(300),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(category_id, locale)
+);
+
+-- Drinks (wine bottles, spirits)
+CREATE TABLE IF NOT EXISTS drinks (
+  id           SERIAL PRIMARY KEY,
+  category_id  INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  name         VARCHAR(300) NOT NULL,
+  producer     VARCHAR(200),
+  vintage      SMALLINT CHECK (vintage IS NULL OR (vintage >= 1800 AND vintage <= 2100)),
+  country      VARCHAR(100),
+  region       VARCHAR(100),
+  appellation  VARCHAR(200),
+  slug         VARCHAR(400) NOT NULL UNIQUE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Drink translations (descriptions, tasting notes per locale)
+CREATE TABLE IF NOT EXISTS drink_translations (
+  id               SERIAL PRIMARY KEY,
+  drink_id         INTEGER NOT NULL REFERENCES drinks(id) ON DELETE CASCADE,
+  locale           VARCHAR(10) NOT NULL,
+  description      TEXT,
+  tasting_notes    TEXT,
+  meta_title       VARCHAR(200),
+  meta_description VARCHAR(300),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(drink_id, locale)
+);
+
+-- Restaurants (Michelin-starred)
+CREATE TABLE IF NOT EXISTS restaurants (
+  id             SERIAL PRIMARY KEY,
+  name           VARCHAR(300) NOT NULL,
+  slug           VARCHAR(400) NOT NULL UNIQUE,
+  country        VARCHAR(100),
+  city           VARCHAR(100),
+  michelin_stars INTEGER NOT NULL DEFAULT 1 CHECK (michelin_stars BETWEEN 1 AND 3),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Restaurant translations (editorial description + wine list critique per locale)
+CREATE TABLE IF NOT EXISTS restaurant_translations (
+  id                SERIAL PRIMARY KEY,
+  restaurant_id     INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  locale            VARCHAR(10) NOT NULL,
+  description       TEXT,
+  wine_list_critique TEXT,
+  meta_title        VARCHAR(200),
+  meta_description  VARCHAR(300),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(restaurant_id, locale)
+);
+
+-- Wine list entries (drink × restaurant with optional price)
+CREATE TABLE IF NOT EXISTS wine_list_entries (
+  id             SERIAL PRIMARY KEY,
+  restaurant_id  INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  drink_id       INTEGER NOT NULL REFERENCES drinks(id) ON DELETE CASCADE,
+  price          DECIMAL(10,2),
+  price_currency VARCHAR(3),
+  year_on_list   SMALLINT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(restaurant_id, drink_id, year_on_list)
+);
+
+-- 301 redirects (old WordPress URLs → new URLs)
+CREATE TABLE IF NOT EXISTS redirects (
+  id          SERIAL PRIMARY KEY,
+  from_path   VARCHAR(500) NOT NULL UNIQUE,
+  to_path     VARCHAR(500) NOT NULL,
+  status_code INTEGER NOT NULL DEFAULT 301 CHECK (status_code IN (301, 302)),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_drinks_category ON drinks(category_id);
+CREATE INDEX IF NOT EXISTS idx_drinks_slug ON drinks(slug);
+CREATE INDEX IF NOT EXISTS idx_drinks_vintage ON drinks(vintage);
+CREATE INDEX IF NOT EXISTS idx_drink_translations_locale ON drink_translations(drink_id, locale);
+CREATE INDEX IF NOT EXISTS idx_category_translations_locale ON category_translations(category_id, locale);
+CREATE INDEX IF NOT EXISTS idx_restaurant_translations_locale ON restaurant_translations(restaurant_id, locale);
+CREATE INDEX IF NOT EXISTS idx_wine_list_entries_restaurant ON wine_list_entries(restaurant_id);
+CREATE INDEX IF NOT EXISTS idx_wine_list_entries_drink ON wine_list_entries(drink_id);
+CREATE INDEX IF NOT EXISTS idx_redirects_from_path ON redirects(from_path);
+-- supabase/rls.sql
+-- Row Level Security — public read via anon key, writes via service role only
+
+-- Enable RLS on all tables
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE category_translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE drinks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE drink_translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restaurants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restaurant_translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wine_list_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE redirects ENABLE ROW LEVEL SECURITY;
+
+-- Public SELECT for anon (read-only for everyone)
+CREATE POLICY "Public read categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "Public read category_translations" ON category_translations FOR SELECT USING (true);
+CREATE POLICY "Public read drinks" ON drinks FOR SELECT USING (true);
+CREATE POLICY "Public read drink_translations" ON drink_translations FOR SELECT USING (true);
+CREATE POLICY "Public read restaurants" ON restaurants FOR SELECT USING (true);
+CREATE POLICY "Public read restaurant_translations" ON restaurant_translations FOR SELECT USING (true);
+CREATE POLICY "Public read wine_list_entries" ON wine_list_entries FOR SELECT USING (true);
+CREATE POLICY "Public read redirects" ON redirects FOR SELECT USING (true);
+
+-- No INSERT/UPDATE/DELETE for anon — only service role bypasses RLS
+-- (service_role key bypasses RLS by default in Supabase)
+-- supabase/migration.sql
+-- Generated by scripts/migrate-wp.ts
+-- Date: 2026-03-18
+--
+-- WordPress -> Supabase category migration for bestwine.online
+-- 103 categories, FR + EN-US translations, 301 redirects
+
+BEGIN;
+
+-- =====================================================
+-- 1. Clean existing seed data
+-- =====================================================
+DELETE FROM category_translations;
+DELETE FROM redirects;
+DELETE FROM wine_list_entries;
+DELETE FROM drink_translations;
+DELETE FROM drinks;
+DELETE FROM categories;
+
+-- =====================================================
+-- 2. Insert categories
+-- =====================================================
+
+-- Level 0: top-level categories
+INSERT INTO categories (slug, parent_id, sort_order) VALUES
+  ('whisky', NULL, 1),
+  ('vin-rouge', NULL, 2),
+  ('vin-blanc', NULL, 3),
+  ('vin-rose', NULL, 4),
+  ('vin-jaune', NULL, 5),
+  ('vin-orange', NULL, 6),
+  ('champagne', NULL, 7),
+  ('prosecco', NULL, 8),
+  ('cremant', NULL, 9),
+  ('cava', NULL, 10),
+  ('blanquettes-de-limoux', NULL, 11),
+  ('clairette-de-die', NULL, 12),
+  ('mousseux', NULL, 13),
+  ('rhum', NULL, 14),
+  ('vodka', NULL, 15),
+  ('cognac', NULL, 16),
+  ('armagnac', NULL, 17),
+  ('calvados', NULL, 18),
+  ('brandy', NULL, 19),
+  ('eau-de-vie', NULL, 20),
+  ('grappa', NULL, 21),
+  ('kirsch', NULL, 22),
+  ('pisco', NULL, 23),
+  ('cachaca', NULL, 24),
+  ('lambig', NULL, 25),
+  ('liqueurs', NULL, 26),
+  ('gin', NULL, 27),
+  ('tequila', NULL, 28),
+  ('mezcal', NULL, 29),
+  ('sake', NULL, 30),
+  ('pastis', NULL, 31),
+  ('vermouth', NULL, 32),
+  ('porto', NULL, 33),
+  ('pineau-des-charentes', NULL, 34),
+  ('marsala', NULL, 35),
+  ('arak', NULL, 36),
+  ('raki', NULL, 37),
+  ('ouzo', NULL, 38),
+  ('schnaps', NULL, 39),
+  ('aquavit', NULL, 40),
+  ('sambuca', NULL, 41),
+  ('amaretto', NULL, 42),
+  ('triple-sec', NULL, 43),
+  ('marasquin', NULL, 44),
+  ('manzana', NULL, 45),
+  ('chartreuse', NULL, 46),
+  ('genepi', NULL, 47),
+  ('genievre', NULL, 48),
+  ('bitter', NULL, 49),
+  ('digestif', NULL, 50),
+  ('patxaran', NULL, 51),
+  ('chouchen', NULL, 52),
+  ('hydromel', NULL, 53),
+  ('creme-cassis', NULL, 54),
+  ('biere', NULL, 55),
+  ('cidre', NULL, 56),
+  ('vins-spiritueux-dessert', NULL, 57)
+ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+
+-- Level 1: subcategories
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('bourbon', (SELECT id FROM categories WHERE slug = 'whisky'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('canadien', (SELECT id FROM categories WHERE slug = 'whisky'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('francais', (SELECT id FROM categories WHERE slug = 'whisky'), 3) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('indien', (SELECT id FROM categories WHERE slug = 'whisky'), 4) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('irlandais', (SELECT id FROM categories WHERE slug = 'whisky'), 5) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('japonais', (SELECT id FROM categories WHERE slug = 'whisky'), 6) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('scotch', (SELECT id FROM categories WHERE slug = 'whisky'), 7) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('agricole', (SELECT id FROM categories WHERE slug = 'rhum'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('ambre', (SELECT id FROM categories WHERE slug = 'rhum'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('arrange', (SELECT id FROM categories WHERE slug = 'rhum'), 3) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('blanc', (SELECT id FROM categories WHERE slug = 'rhum'), 4) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('cubain', (SELECT id FROM categories WHERE slug = 'rhum'), 5) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('martiniquais', (SELECT id FROM categories WHERE slug = 'rhum'), 6) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('vieux', (SELECT id FROM categories WHERE slug = 'rhum'), 7) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('francaise', (SELECT id FROM categories WHERE slug = 'vodka'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('pologne', (SELECT id FROM categories WHERE slug = 'vodka'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('russie', (SELECT id FROM categories WHERE slug = 'vodka'), 3) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('rose', (SELECT id FROM categories WHERE slug = 'champagne'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('alsace', (SELECT id FROM categories WHERE slug = 'cremant'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('bourgogne', (SELECT id FROM categories WHERE slug = 'cremant'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('jura', (SELECT id FROM categories WHERE slug = 'cremant'), 3) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('loire', (SELECT id FROM categories WHERE slug = 'cremant'), 4) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('cremant-rose', (SELECT id FROM categories WHERE slug = 'cremant'), 5) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('savoie', (SELECT id FROM categories WHERE slug = 'cremant'), 6) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('saumur', (SELECT id FROM categories WHERE slug = 'mousseux'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('vouvray', (SELECT id FROM categories WHERE slug = 'mousseux'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('cafe', (SELECT id FROM categories WHERE slug = 'liqueurs'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('chocolat', (SELECT id FROM categories WHERE slug = 'liqueurs'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('herbes', (SELECT id FROM categories WHERE slug = 'liqueurs'), 3) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('limoncello', (SELECT id FROM categories WHERE slug = 'liqueurs'), 4) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('liqueur-whisky', (SELECT id FROM categories WHERE slug = 'liqueurs'), 5) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('fruits', (SELECT id FROM categories WHERE slug = 'liqueurs'), 6) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('plantes', (SELECT id FROM categories WHERE slug = 'liqueurs'), 7) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+
+-- Level 2: sub-subcategories (e.g. liqueurs/fruits/amande)
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('amande', (SELECT id FROM categories WHERE slug = 'fruits'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('cassis', (SELECT id FROM categories WHERE slug = 'fruits'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('cerise', (SELECT id FROM categories WHERE slug = 'fruits'), 3) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('citron', (SELECT id FROM categories WHERE slug = 'fruits'), 4) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('framboise', (SELECT id FROM categories WHERE slug = 'fruits'), 5) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('litchi', (SELECT id FROM categories WHERE slug = 'fruits'), 6) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('noix-de-coco', (SELECT id FROM categories WHERE slug = 'fruits'), 7) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('noix', (SELECT id FROM categories WHERE slug = 'fruits'), 8) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('orange', (SELECT id FROM categories WHERE slug = 'fruits'), 9) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('peche', (SELECT id FROM categories WHERE slug = 'fruits'), 10) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('pomme', (SELECT id FROM categories WHERE slug = 'fruits'), 11) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('anis', (SELECT id FROM categories WHERE slug = 'plantes'), 1) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+INSERT INTO categories (slug, parent_id, sort_order) VALUES ('menthe', (SELECT id FROM categories WHERE slug = 'plantes'), 2) ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id, sort_order = EXCLUDED.sort_order;
+
+-- =====================================================
+-- 3. Category translations — FR
+-- =====================================================
+
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Whisky', 'Whisky : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs whisky référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'whisky' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vin rouge', 'Vin rouge : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vin rouge référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vin-rouge' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vin blanc', 'Vin blanc : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vin blanc référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vin-blanc' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vin rosé', 'Vin rosé : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vin rosé référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vin-rose' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vin jaune', 'Vin jaune : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vin jaune référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vin-jaune' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vin orange', 'Vin orange : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vin orange référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vin-orange' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Champagne', 'Champagne : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs champagne référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'champagne' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Prosecco', 'Prosecco : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs prosecco référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'prosecco' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant', 'Crémant : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cremant' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Cava', 'Cava : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs cava référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cava' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Blanquette de Limoux', 'Blanquette de Limoux : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs blanquette de Limoux référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'blanquettes-de-limoux' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Clairette de Die', 'Clairette de Die : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs clairette de Die référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'clairette-de-die' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Mousseux', 'Mousseux : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs mousseux référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'mousseux' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum', 'Rhum : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'rhum' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vodka', 'Vodka : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vodka référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vodka' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Cognac', 'Cognac : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs cognac référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cognac' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Armagnac', 'Armagnac : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs armagnac référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'armagnac' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Calvados', 'Calvados : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs calvados référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'calvados' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Brandy', 'Brandy : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs brandy référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'brandy' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Eau-de-vie', 'Eau-de-vie : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs eau-de-vie référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'eau-de-vie' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Grappa', 'Grappa : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs grappa référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'grappa' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Kirsch', 'Kirsch : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs kirsch référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'kirsch' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Pisco', 'Pisco : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs pisco référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'pisco' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Cachaça', 'Cachaça : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs cachaça référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cachaca' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Lambig', 'Lambig : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs lambig référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'lambig' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueurs', 'Liqueurs : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueurs référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'liqueurs' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Gin', 'Gin : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs gin référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'gin' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Tequila', 'Tequila : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs tequila référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'tequila' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Mezcal', 'Mezcal : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs mezcal référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'mezcal' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Saké', 'Saké : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs saké référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'sake' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Pastis', 'Pastis : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs pastis référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'pastis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vermouth', 'Vermouth : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vermouth référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vermouth' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Porto', 'Porto : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs porto référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'porto' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Pineau des Charentes', 'Pineau des Charentes : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs pineau des Charentes référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'pineau-des-charentes' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Marsala', 'Marsala : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs marsala référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'marsala' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Arak', 'Arak : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs arak référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'arak' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Raki', 'Raki : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs raki référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'raki' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Ouzo', 'Ouzo : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs ouzo référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'ouzo' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Schnaps', 'Schnaps : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs schnaps référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'schnaps' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Aquavit', 'Aquavit : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs aquavit référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'aquavit' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Sambuca', 'Sambuca : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs sambuca référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'sambuca' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Amaretto', 'Amaretto : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs amaretto référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'amaretto' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Triple sec', 'Triple sec : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs triple sec référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'triple-sec' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Marasquin', 'Marasquin : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs marasquin référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'marasquin' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Manzana', 'Manzana : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs manzana référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'manzana' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Chartreuse', 'Chartreuse : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs chartreuse référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'chartreuse' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Génépi', 'Génépi : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs génépi référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'genepi' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Genièvre', 'Genièvre : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs genièvre référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'genievre' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Bitter', 'Bitter : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs bitter référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'bitter' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Digestif', 'Digestif : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs digestif référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'digestif' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Patxaran', 'Patxaran : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs patxaran référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'patxaran' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Chouchen', 'Chouchen : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs chouchen référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'chouchen' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Hydromel', 'Hydromel : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs hydromel référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'hydromel' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crème de Cassis', 'Crème de Cassis : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crème de Cassis référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'creme-cassis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Bière', 'Bière : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs bière référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'biere' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Cidre', 'Cidre : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs cidre référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cidre' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vins & Spiritueux de dessert', 'Vins & Spiritueux de dessert : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vins & Spiritueux de dessert référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vins-spiritueux-dessert' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Bourbon', 'Bourbon : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs bourbon référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'bourbon' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Whisky canadien', 'Whisky canadien : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs whisky canadien référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'canadien' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Whisky français', 'Whisky français : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs whisky français référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'francais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Whisky indien', 'Whisky indien : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs whisky indien référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'indien' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Whisky irlandais', 'Whisky irlandais : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs whisky irlandais référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'irlandais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Whisky japonais', 'Whisky japonais : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs whisky japonais référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'japonais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Scotch whisky', 'Scotch whisky : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs scotch whisky référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'scotch' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum agricole', 'Rhum agricole : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum agricole référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'agricole' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum ambré', 'Rhum ambré : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum ambré référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'ambre' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum arrangé', 'Rhum arrangé : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum arrangé référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'arrange' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum blanc', 'Rhum blanc : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum blanc référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'blanc' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum cubain', 'Rhum cubain : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum cubain référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cubain' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum martiniquais', 'Rhum martiniquais : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum martiniquais référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'martiniquais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Rhum vieux', 'Rhum vieux : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs rhum vieux référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vieux' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vodka française', 'Vodka française : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vodka française référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'francaise' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vodka de Pologne', 'Vodka de Pologne : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vodka de Pologne référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'pologne' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vodka de Russie', 'Vodka de Russie : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vodka de Russie référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'russie' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Champagne rosé', 'Champagne rosé : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs champagne rosé référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'rose' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant d''Alsace', 'Crémant d''Alsace : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant d''Alsace référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'alsace' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant de Bourgogne', 'Crémant de Bourgogne : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant de Bourgogne référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'bourgogne' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant du Jura', 'Crémant du Jura : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant du Jura référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'jura' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant de Loire', 'Crémant de Loire : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant de Loire référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'loire' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant rosé', 'Crémant rosé : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant rosé référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cremant-rose' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Crémant de Savoie', 'Crémant de Savoie : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs crémant de Savoie référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'savoie' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Saumur mousseux', 'Saumur mousseux : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs saumur mousseux référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'saumur' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Vouvray mousseux', 'Vouvray mousseux : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs vouvray mousseux référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'vouvray' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de café', 'Liqueur de café : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de café référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cafe' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de chocolat', 'Liqueur de chocolat : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de chocolat référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'chocolat' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur aux herbes', 'Liqueur aux herbes : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur aux herbes référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'herbes' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Limoncello', 'Limoncello : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs limoncello référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'limoncello' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de whisky', 'Liqueur de whisky : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de whisky référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'liqueur-whisky' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueurs de fruits', 'Liqueurs de fruits : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueurs de fruits référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'fruits' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueurs de plantes', 'Liqueurs de plantes : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueurs de plantes référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'plantes' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur d''amande', 'Liqueur d''amande : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur d''amande référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'amande' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de cassis', 'Liqueur de cassis : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de cassis référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cassis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de cerise', 'Liqueur de cerise : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de cerise référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'cerise' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de citron', 'Liqueur de citron : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de citron référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'citron' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de framboise', 'Liqueur de framboise : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de framboise référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'framboise' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de litchi', 'Liqueur de litchi : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de litchi référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'litchi' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de noix de coco', 'Liqueur de noix de coco : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de noix de coco référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'noix-de-coco' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de noix', 'Liqueur de noix : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de noix référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'noix' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur d''orange', 'Liqueur d''orange : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur d''orange référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'orange' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de pêche', 'Liqueur de pêche : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de pêche référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'peche' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de pomme', 'Liqueur de pomme : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de pomme référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'pomme' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur d''anis', 'Liqueur d''anis : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur d''anis référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'anis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'fr', 'Liqueur de menthe', 'Liqueur de menthe : les meilleures bouteilles à la carte des restaurants étoilés', 'Découvrez les meilleurs liqueur de menthe référencés à la carte des grands restaurants gastronomiques étoilés Michelin.' FROM categories WHERE slug = 'menthe' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+
+-- =====================================================
+-- 4. Category translations — EN-US
+-- =====================================================
+
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Whisky', 'Whisky: the best bottles on Michelin-starred restaurant menus', 'Discover the finest whisky featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'whisky' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Red Wine', 'Red Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest red Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vin-rouge' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'White Wine', 'White Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest white Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vin-blanc' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Rosé Wine', 'Rosé Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest rosé Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vin-rose' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Yellow Wine', 'Yellow Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest yellow Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vin-jaune' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Orange Wine', 'Orange Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest orange Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vin-orange' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Champagne', 'Champagne: the best bottles on Michelin-starred restaurant menus', 'Discover the finest champagne featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'champagne' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Prosecco', 'Prosecco: the best bottles on Michelin-starred restaurant menus', 'Discover the finest prosecco featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'prosecco' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crémant', 'Crémant: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crémant featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cremant' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Cava', 'Cava: the best bottles on Michelin-starred restaurant menus', 'Discover the finest cava featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cava' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Blanquette de Limoux', 'Blanquette de Limoux: the best bottles on Michelin-starred restaurant menus', 'Discover the finest blanquette de Limoux featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'blanquettes-de-limoux' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Clairette de Die', 'Clairette de Die: the best bottles on Michelin-starred restaurant menus', 'Discover the finest clairette de Die featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'clairette-de-die' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Sparkling Wine', 'Sparkling Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest sparkling Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'mousseux' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Rum', 'Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'rhum' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Vodka', 'Vodka: the best bottles on Michelin-starred restaurant menus', 'Discover the finest vodka featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vodka' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Cognac', 'Cognac: the best bottles on Michelin-starred restaurant menus', 'Discover the finest cognac featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cognac' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Armagnac', 'Armagnac: the best bottles on Michelin-starred restaurant menus', 'Discover the finest armagnac featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'armagnac' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Calvados', 'Calvados: the best bottles on Michelin-starred restaurant menus', 'Discover the finest calvados featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'calvados' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Brandy', 'Brandy: the best bottles on Michelin-starred restaurant menus', 'Discover the finest brandy featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'brandy' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Eau-de-vie', 'Eau-de-vie: the best bottles on Michelin-starred restaurant menus', 'Discover the finest eau-de-vie featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'eau-de-vie' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Grappa', 'Grappa: the best bottles on Michelin-starred restaurant menus', 'Discover the finest grappa featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'grappa' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Kirsch', 'Kirsch: the best bottles on Michelin-starred restaurant menus', 'Discover the finest kirsch featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'kirsch' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Pisco', 'Pisco: the best bottles on Michelin-starred restaurant menus', 'Discover the finest pisco featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'pisco' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Cachaça', 'Cachaça: the best bottles on Michelin-starred restaurant menus', 'Discover the finest cachaça featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cachaca' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Lambig', 'Lambig: the best bottles on Michelin-starred restaurant menus', 'Discover the finest lambig featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'lambig' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Liqueurs', 'Liqueurs: the best bottles on Michelin-starred restaurant menus', 'Discover the finest liqueurs featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'liqueurs' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Gin', 'Gin: the best bottles on Michelin-starred restaurant menus', 'Discover the finest gin featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'gin' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Tequila', 'Tequila: the best bottles on Michelin-starred restaurant menus', 'Discover the finest tequila featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'tequila' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Mezcal', 'Mezcal: the best bottles on Michelin-starred restaurant menus', 'Discover the finest mezcal featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'mezcal' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Sake', 'Sake: the best bottles on Michelin-starred restaurant menus', 'Discover the finest sake featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'sake' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Pastis', 'Pastis: the best bottles on Michelin-starred restaurant menus', 'Discover the finest pastis featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'pastis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Vermouth', 'Vermouth: the best bottles on Michelin-starred restaurant menus', 'Discover the finest vermouth featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vermouth' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Port Wine', 'Port Wine: the best bottles on Michelin-starred restaurant menus', 'Discover the finest port Wine featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'porto' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Pineau des Charentes', 'Pineau des Charentes: the best bottles on Michelin-starred restaurant menus', 'Discover the finest pineau des Charentes featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'pineau-des-charentes' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Marsala', 'Marsala: the best bottles on Michelin-starred restaurant menus', 'Discover the finest marsala featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'marsala' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Arak', 'Arak: the best bottles on Michelin-starred restaurant menus', 'Discover the finest arak featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'arak' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Raki', 'Raki: the best bottles on Michelin-starred restaurant menus', 'Discover the finest raki featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'raki' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Ouzo', 'Ouzo: the best bottles on Michelin-starred restaurant menus', 'Discover the finest ouzo featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'ouzo' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Schnapps', 'Schnapps: the best bottles on Michelin-starred restaurant menus', 'Discover the finest schnapps featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'schnaps' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Aquavit', 'Aquavit: the best bottles on Michelin-starred restaurant menus', 'Discover the finest aquavit featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'aquavit' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Sambuca', 'Sambuca: the best bottles on Michelin-starred restaurant menus', 'Discover the finest sambuca featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'sambuca' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Amaretto', 'Amaretto: the best bottles on Michelin-starred restaurant menus', 'Discover the finest amaretto featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'amaretto' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Triple Sec', 'Triple Sec: the best bottles on Michelin-starred restaurant menus', 'Discover the finest triple Sec featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'triple-sec' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Maraschino', 'Maraschino: the best bottles on Michelin-starred restaurant menus', 'Discover the finest maraschino featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'marasquin' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Manzana', 'Manzana: the best bottles on Michelin-starred restaurant menus', 'Discover the finest manzana featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'manzana' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Chartreuse', 'Chartreuse: the best bottles on Michelin-starred restaurant menus', 'Discover the finest chartreuse featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'chartreuse' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Génépi', 'Génépi: the best bottles on Michelin-starred restaurant menus', 'Discover the finest génépi featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'genepi' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Genever', 'Genever: the best bottles on Michelin-starred restaurant menus', 'Discover the finest genever featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'genievre' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Bitters', 'Bitters: the best bottles on Michelin-starred restaurant menus', 'Discover the finest bitters featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'bitter' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Digestif', 'Digestif: the best bottles on Michelin-starred restaurant menus', 'Discover the finest digestif featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'digestif' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Patxaran', 'Patxaran: the best bottles on Michelin-starred restaurant menus', 'Discover the finest patxaran featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'patxaran' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Chouchen', 'Chouchen: the best bottles on Michelin-starred restaurant menus', 'Discover the finest chouchen featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'chouchen' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Mead', 'Mead: the best bottles on Michelin-starred restaurant menus', 'Discover the finest mead featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'hydromel' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crème de Cassis', 'Crème de Cassis: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crème de Cassis featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'creme-cassis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Beer', 'Beer: the best bottles on Michelin-starred restaurant menus', 'Discover the finest beer featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'biere' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Cider', 'Cider: the best bottles on Michelin-starred restaurant menus', 'Discover the finest cider featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cidre' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Dessert Wines & Spirits', 'Dessert Wines & Spirits: the best bottles on Michelin-starred restaurant menus', 'Discover the finest dessert Wines & Spirits featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vins-spiritueux-dessert' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Bourbon', 'Bourbon: the best bottles on Michelin-starred restaurant menus', 'Discover the finest bourbon featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'bourbon' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Canadian Whisky', 'Canadian Whisky: the best bottles on Michelin-starred restaurant menus', 'Discover the finest canadian Whisky featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'canadien' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'French Whisky', 'French Whisky: the best bottles on Michelin-starred restaurant menus', 'Discover the finest french Whisky featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'francais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Indian Whisky', 'Indian Whisky: the best bottles on Michelin-starred restaurant menus', 'Discover the finest indian Whisky featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'indien' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Irish Whiskey', 'Irish Whiskey: the best bottles on Michelin-starred restaurant menus', 'Discover the finest irish Whiskey featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'irlandais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Japanese Whisky', 'Japanese Whisky: the best bottles on Michelin-starred restaurant menus', 'Discover the finest japanese Whisky featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'japonais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Scotch Whisky', 'Scotch Whisky: the best bottles on Michelin-starred restaurant menus', 'Discover the finest scotch Whisky featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'scotch' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Agricole Rum', 'Agricole Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest agricole Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'agricole' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Amber Rum', 'Amber Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest amber Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'ambre' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Infused Rum', 'Infused Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest infused Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'arrange' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'White Rum', 'White Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest white Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'blanc' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Cuban Rum', 'Cuban Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest cuban Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cubain' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Martinique Rum', 'Martinique Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest martinique Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'martiniquais' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Aged Rum', 'Aged Rum: the best bottles on Michelin-starred restaurant menus', 'Discover the finest aged Rum featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vieux' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'French Vodka', 'French Vodka: the best bottles on Michelin-starred restaurant menus', 'Discover the finest french Vodka featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'francaise' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Polish Vodka', 'Polish Vodka: the best bottles on Michelin-starred restaurant menus', 'Discover the finest polish Vodka featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'pologne' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Russian Vodka', 'Russian Vodka: the best bottles on Michelin-starred restaurant menus', 'Discover the finest russian Vodka featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'russie' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Rosé Champagne', 'Rosé Champagne: the best bottles on Michelin-starred restaurant menus', 'Discover the finest rosé Champagne featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'rose' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crémant d''Alsace', 'Crémant d''Alsace: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crémant d''Alsace featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'alsace' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crémant de Bourgogne', 'Crémant de Bourgogne: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crémant de Bourgogne featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'bourgogne' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crémant du Jura', 'Crémant du Jura: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crémant du Jura featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'jura' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crémant de Loire', 'Crémant de Loire: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crémant de Loire featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'loire' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Rosé Crémant', 'Rosé Crémant: the best bottles on Michelin-starred restaurant menus', 'Discover the finest rosé Crémant featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cremant-rose' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Crémant de Savoie', 'Crémant de Savoie: the best bottles on Michelin-starred restaurant menus', 'Discover the finest crémant de Savoie featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'savoie' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Saumur Sparkling', 'Saumur Sparkling: the best bottles on Michelin-starred restaurant menus', 'Discover the finest saumur Sparkling featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'saumur' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Vouvray Sparkling', 'Vouvray Sparkling: the best bottles on Michelin-starred restaurant menus', 'Discover the finest vouvray Sparkling featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'vouvray' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Coffee Liqueur', 'Coffee Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest coffee Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cafe' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Chocolate Liqueur', 'Chocolate Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest chocolate Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'chocolat' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Herbal Liqueur', 'Herbal Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest herbal Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'herbes' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Limoncello', 'Limoncello: the best bottles on Michelin-starred restaurant menus', 'Discover the finest limoncello featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'limoncello' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Whisky Liqueur', 'Whisky Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest whisky Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'liqueur-whisky' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Fruit Liqueurs', 'Fruit Liqueurs: the best bottles on Michelin-starred restaurant menus', 'Discover the finest fruit Liqueurs featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'fruits' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Botanical Liqueurs', 'Botanical Liqueurs: the best bottles on Michelin-starred restaurant menus', 'Discover the finest botanical Liqueurs featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'plantes' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Almond Liqueur', 'Almond Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest almond Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'amande' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Blackcurrant Liqueur', 'Blackcurrant Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest blackcurrant Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cassis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Cherry Liqueur', 'Cherry Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest cherry Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'cerise' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Lemon Liqueur', 'Lemon Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest lemon Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'citron' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Raspberry Liqueur', 'Raspberry Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest raspberry Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'framboise' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Lychee Liqueur', 'Lychee Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest lychee Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'litchi' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Coconut Liqueur', 'Coconut Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest coconut Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'noix-de-coco' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Walnut Liqueur', 'Walnut Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest walnut Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'noix' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Orange Liqueur', 'Orange Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest orange Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'orange' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Peach Liqueur', 'Peach Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest peach Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'peche' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Apple Liqueur', 'Apple Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest apple Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'pomme' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Anise Liqueur', 'Anise Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest anise Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'anis' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+INSERT INTO category_translations (category_id, locale, name, meta_title, meta_description) SELECT id, 'en-us', 'Mint Liqueur', 'Mint Liqueur: the best bottles on Michelin-starred restaurant menus', 'Discover the finest mint Liqueur featured on Michelin-starred gastronomic restaurant wine lists.' FROM categories WHERE slug = 'menthe' ON CONFLICT (category_id, locale) DO UPDATE SET name = EXCLUDED.name, meta_title = EXCLUDED.meta_title, meta_description = EXCLUDED.meta_description;
+
+-- =====================================================
+-- 5. 301 Redirects
+-- =====================================================
+
+-- 5a. Root URLs (no locale prefix) -> /fr/...
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/', '/fr/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vin-rouge/', '/fr/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vin-blanc/', '/fr/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vin-rose/', '/fr/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vin-jaune/', '/fr/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vin-orange/', '/fr/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/champagne/', '/fr/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/prosecco/', '/fr/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/', '/fr/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cava/', '/fr/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/blanquettes-de-limoux/', '/fr/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/clairette-de-die/', '/fr/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/mousseux/', '/fr/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/', '/fr/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vodka/', '/fr/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cognac/', '/fr/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/armagnac/', '/fr/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/calvados/', '/fr/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/brandy/', '/fr/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/eau-de-vie/', '/fr/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/grappa/', '/fr/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/kirsch/', '/fr/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pisco/', '/fr/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cachaca/', '/fr/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/lambig/', '/fr/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/', '/fr/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/gin/', '/fr/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/tequila/', '/fr/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/mezcal/', '/fr/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/sake/', '/fr/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pastis/', '/fr/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vermouth/', '/fr/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/porto/', '/fr/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pineau-des-charentes/', '/fr/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/marsala/', '/fr/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/arak/', '/fr/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/raki/', '/fr/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/ouzo/', '/fr/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/schnaps/', '/fr/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/aquavit/', '/fr/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/sambuca/', '/fr/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/amaretto/', '/fr/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/triple-sec/', '/fr/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/marasquin/', '/fr/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/manzana/', '/fr/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/chartreuse/', '/fr/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/genepi/', '/fr/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/genievre/', '/fr/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/bitter/', '/fr/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/digestif/', '/fr/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/patxaran/', '/fr/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/chouchen/', '/fr/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/hydromel/', '/fr/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/creme-cassis/', '/fr/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/biere/', '/fr/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cidre/', '/fr/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vins-spiritueux-dessert/', '/fr/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/bourbon/', '/fr/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/canadien/', '/fr/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/francais/', '/fr/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/indien/', '/fr/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/irlandais/', '/fr/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/japonais/', '/fr/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/whisky/scotch/', '/fr/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/agricole/', '/fr/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/ambre/', '/fr/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/arrange/', '/fr/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/blanc/', '/fr/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/cubain/', '/fr/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/martiniquais/', '/fr/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/rhum/vieux/', '/fr/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vodka/francaise/', '/fr/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vodka/pologne/', '/fr/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/vodka/russie/', '/fr/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/champagne/rose/', '/fr/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/alsace/', '/fr/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/bourgogne/', '/fr/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/jura/', '/fr/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/loire/', '/fr/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/cremant-rose/', '/fr/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/cremant/savoie/', '/fr/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/mousseux/saumur/', '/fr/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/mousseux/vouvray/', '/fr/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/cafe/', '/fr/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/chocolat/', '/fr/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/herbes/', '/fr/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/limoncello/', '/fr/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/liqueur-whisky/', '/fr/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/', '/fr/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/plantes/', '/fr/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/amande/', '/fr/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/cassis/', '/fr/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/cerise/', '/fr/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/citron/', '/fr/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/framboise/', '/fr/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/litchi/', '/fr/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/noix-de-coco/', '/fr/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/noix/', '/fr/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/orange/', '/fr/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/peche/', '/fr/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/fruits/pomme/', '/fr/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/plantes/anis/', '/fr/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/liqueurs/plantes/menthe/', '/fr/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+
+-- 5b. Abandoned categories -> /fr/
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/fr/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-us/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/it/verres/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/fr/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-us/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/it/carafes/', '/fr/', 301) ON CONFLICT (from_path) DO NOTHING;
+
+-- 5c. Consolidated locale redirects
+-- en-ca, en-au, en-za -> en-us | es-me -> es | pt-br -> pt
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/', '/en-us/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/', '/en-us/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vin-rouge/', '/en-us/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vin-blanc/', '/en-us/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vin-rose/', '/en-us/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vin-jaune/', '/en-us/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vin-orange/', '/en-us/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/champagne/', '/en-us/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/prosecco/', '/en-us/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/', '/en-us/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cava/', '/en-us/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/blanquettes-de-limoux/', '/en-us/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/clairette-de-die/', '/en-us/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/mousseux/', '/en-us/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/', '/en-us/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vodka/', '/en-us/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cognac/', '/en-us/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/armagnac/', '/en-us/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/calvados/', '/en-us/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/brandy/', '/en-us/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/eau-de-vie/', '/en-us/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/grappa/', '/en-us/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/kirsch/', '/en-us/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/pisco/', '/en-us/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cachaca/', '/en-us/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/lambig/', '/en-us/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/', '/en-us/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/gin/', '/en-us/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/tequila/', '/en-us/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/mezcal/', '/en-us/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/sake/', '/en-us/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/pastis/', '/en-us/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vermouth/', '/en-us/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/porto/', '/en-us/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/pineau-des-charentes/', '/en-us/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/marsala/', '/en-us/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/arak/', '/en-us/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/raki/', '/en-us/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/ouzo/', '/en-us/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/schnaps/', '/en-us/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/aquavit/', '/en-us/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/sambuca/', '/en-us/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/amaretto/', '/en-us/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/triple-sec/', '/en-us/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/marasquin/', '/en-us/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/manzana/', '/en-us/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/chartreuse/', '/en-us/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/genepi/', '/en-us/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/genievre/', '/en-us/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/bitter/', '/en-us/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/digestif/', '/en-us/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/patxaran/', '/en-us/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/chouchen/', '/en-us/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/hydromel/', '/en-us/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/creme-cassis/', '/en-us/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/biere/', '/en-us/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cidre/', '/en-us/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vins-spiritueux-dessert/', '/en-us/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/bourbon/', '/en-us/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/canadien/', '/en-us/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/francais/', '/en-us/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/indien/', '/en-us/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/irlandais/', '/en-us/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/japonais/', '/en-us/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/whisky/scotch/', '/en-us/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/agricole/', '/en-us/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/ambre/', '/en-us/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/arrange/', '/en-us/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/blanc/', '/en-us/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/cubain/', '/en-us/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/martiniquais/', '/en-us/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/rhum/vieux/', '/en-us/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vodka/francaise/', '/en-us/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vodka/pologne/', '/en-us/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/vodka/russie/', '/en-us/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/champagne/rose/', '/en-us/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/alsace/', '/en-us/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/bourgogne/', '/en-us/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/jura/', '/en-us/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/loire/', '/en-us/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/cremant-rose/', '/en-us/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/cremant/savoie/', '/en-us/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/mousseux/saumur/', '/en-us/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/mousseux/vouvray/', '/en-us/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/cafe/', '/en-us/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/chocolat/', '/en-us/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/herbes/', '/en-us/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/limoncello/', '/en-us/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/liqueur-whisky/', '/en-us/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/', '/en-us/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/plantes/', '/en-us/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/amande/', '/en-us/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/cassis/', '/en-us/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/cerise/', '/en-us/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/citron/', '/en-us/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/framboise/', '/en-us/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/litchi/', '/en-us/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/noix-de-coco/', '/en-us/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/noix/', '/en-us/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/orange/', '/en-us/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/peche/', '/en-us/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/fruits/pomme/', '/en-us/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/plantes/anis/', '/en-us/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-ca/liqueurs/plantes/menthe/', '/en-us/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/', '/en-us/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/', '/en-us/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vin-rouge/', '/en-us/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vin-blanc/', '/en-us/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vin-rose/', '/en-us/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vin-jaune/', '/en-us/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vin-orange/', '/en-us/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/champagne/', '/en-us/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/prosecco/', '/en-us/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/', '/en-us/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cava/', '/en-us/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/blanquettes-de-limoux/', '/en-us/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/clairette-de-die/', '/en-us/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/mousseux/', '/en-us/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/', '/en-us/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vodka/', '/en-us/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cognac/', '/en-us/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/armagnac/', '/en-us/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/calvados/', '/en-us/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/brandy/', '/en-us/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/eau-de-vie/', '/en-us/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/grappa/', '/en-us/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/kirsch/', '/en-us/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/pisco/', '/en-us/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cachaca/', '/en-us/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/lambig/', '/en-us/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/', '/en-us/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/gin/', '/en-us/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/tequila/', '/en-us/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/mezcal/', '/en-us/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/sake/', '/en-us/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/pastis/', '/en-us/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vermouth/', '/en-us/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/porto/', '/en-us/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/pineau-des-charentes/', '/en-us/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/marsala/', '/en-us/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/arak/', '/en-us/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/raki/', '/en-us/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/ouzo/', '/en-us/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/schnaps/', '/en-us/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/aquavit/', '/en-us/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/sambuca/', '/en-us/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/amaretto/', '/en-us/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/triple-sec/', '/en-us/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/marasquin/', '/en-us/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/manzana/', '/en-us/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/chartreuse/', '/en-us/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/genepi/', '/en-us/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/genievre/', '/en-us/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/bitter/', '/en-us/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/digestif/', '/en-us/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/patxaran/', '/en-us/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/chouchen/', '/en-us/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/hydromel/', '/en-us/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/creme-cassis/', '/en-us/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/biere/', '/en-us/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cidre/', '/en-us/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vins-spiritueux-dessert/', '/en-us/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/bourbon/', '/en-us/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/canadien/', '/en-us/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/francais/', '/en-us/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/indien/', '/en-us/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/irlandais/', '/en-us/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/japonais/', '/en-us/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/whisky/scotch/', '/en-us/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/agricole/', '/en-us/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/ambre/', '/en-us/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/arrange/', '/en-us/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/blanc/', '/en-us/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/cubain/', '/en-us/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/martiniquais/', '/en-us/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/rhum/vieux/', '/en-us/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vodka/francaise/', '/en-us/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vodka/pologne/', '/en-us/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/vodka/russie/', '/en-us/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/champagne/rose/', '/en-us/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/alsace/', '/en-us/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/bourgogne/', '/en-us/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/jura/', '/en-us/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/loire/', '/en-us/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/cremant-rose/', '/en-us/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/cremant/savoie/', '/en-us/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/mousseux/saumur/', '/en-us/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/mousseux/vouvray/', '/en-us/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/cafe/', '/en-us/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/chocolat/', '/en-us/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/herbes/', '/en-us/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/limoncello/', '/en-us/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/liqueur-whisky/', '/en-us/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/', '/en-us/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/plantes/', '/en-us/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/amande/', '/en-us/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/cassis/', '/en-us/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/cerise/', '/en-us/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/citron/', '/en-us/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/framboise/', '/en-us/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/litchi/', '/en-us/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/noix-de-coco/', '/en-us/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/noix/', '/en-us/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/orange/', '/en-us/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/peche/', '/en-us/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/fruits/pomme/', '/en-us/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/plantes/anis/', '/en-us/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-au/liqueurs/plantes/menthe/', '/en-us/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/', '/en-us/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/', '/en-us/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vin-rouge/', '/en-us/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vin-blanc/', '/en-us/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vin-rose/', '/en-us/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vin-jaune/', '/en-us/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vin-orange/', '/en-us/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/champagne/', '/en-us/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/prosecco/', '/en-us/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/', '/en-us/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cava/', '/en-us/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/blanquettes-de-limoux/', '/en-us/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/clairette-de-die/', '/en-us/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/mousseux/', '/en-us/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/', '/en-us/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vodka/', '/en-us/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cognac/', '/en-us/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/armagnac/', '/en-us/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/calvados/', '/en-us/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/brandy/', '/en-us/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/eau-de-vie/', '/en-us/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/grappa/', '/en-us/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/kirsch/', '/en-us/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/pisco/', '/en-us/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cachaca/', '/en-us/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/lambig/', '/en-us/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/', '/en-us/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/gin/', '/en-us/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/tequila/', '/en-us/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/mezcal/', '/en-us/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/sake/', '/en-us/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/pastis/', '/en-us/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vermouth/', '/en-us/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/porto/', '/en-us/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/pineau-des-charentes/', '/en-us/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/marsala/', '/en-us/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/arak/', '/en-us/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/raki/', '/en-us/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/ouzo/', '/en-us/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/schnaps/', '/en-us/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/aquavit/', '/en-us/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/sambuca/', '/en-us/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/amaretto/', '/en-us/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/triple-sec/', '/en-us/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/marasquin/', '/en-us/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/manzana/', '/en-us/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/chartreuse/', '/en-us/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/genepi/', '/en-us/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/genievre/', '/en-us/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/bitter/', '/en-us/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/digestif/', '/en-us/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/patxaran/', '/en-us/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/chouchen/', '/en-us/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/hydromel/', '/en-us/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/creme-cassis/', '/en-us/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/biere/', '/en-us/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cidre/', '/en-us/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vins-spiritueux-dessert/', '/en-us/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/bourbon/', '/en-us/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/canadien/', '/en-us/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/francais/', '/en-us/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/indien/', '/en-us/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/irlandais/', '/en-us/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/japonais/', '/en-us/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/whisky/scotch/', '/en-us/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/agricole/', '/en-us/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/ambre/', '/en-us/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/arrange/', '/en-us/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/blanc/', '/en-us/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/cubain/', '/en-us/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/martiniquais/', '/en-us/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/rhum/vieux/', '/en-us/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vodka/francaise/', '/en-us/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vodka/pologne/', '/en-us/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/vodka/russie/', '/en-us/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/champagne/rose/', '/en-us/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/alsace/', '/en-us/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/bourgogne/', '/en-us/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/jura/', '/en-us/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/loire/', '/en-us/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/cremant-rose/', '/en-us/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/cremant/savoie/', '/en-us/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/mousseux/saumur/', '/en-us/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/mousseux/vouvray/', '/en-us/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/cafe/', '/en-us/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/chocolat/', '/en-us/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/herbes/', '/en-us/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/limoncello/', '/en-us/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/liqueur-whisky/', '/en-us/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/', '/en-us/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/plantes/', '/en-us/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/amande/', '/en-us/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/cassis/', '/en-us/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/cerise/', '/en-us/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/citron/', '/en-us/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/framboise/', '/en-us/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/litchi/', '/en-us/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/noix-de-coco/', '/en-us/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/noix/', '/en-us/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/orange/', '/en-us/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/peche/', '/en-us/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/fruits/pomme/', '/en-us/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/plantes/anis/', '/en-us/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-za/liqueurs/plantes/menthe/', '/en-us/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/', '/en-us/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/', '/en-us/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vin-rouge/', '/en-us/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vin-blanc/', '/en-us/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vin-rose/', '/en-us/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vin-jaune/', '/en-us/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vin-orange/', '/en-us/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/champagne/', '/en-us/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/prosecco/', '/en-us/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/', '/en-us/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cava/', '/en-us/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/blanquettes-de-limoux/', '/en-us/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/clairette-de-die/', '/en-us/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/mousseux/', '/en-us/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/', '/en-us/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vodka/', '/en-us/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cognac/', '/en-us/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/armagnac/', '/en-us/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/calvados/', '/en-us/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/brandy/', '/en-us/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/eau-de-vie/', '/en-us/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/grappa/', '/en-us/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/kirsch/', '/en-us/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/pisco/', '/en-us/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cachaca/', '/en-us/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/lambig/', '/en-us/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/', '/en-us/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/gin/', '/en-us/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/tequila/', '/en-us/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/mezcal/', '/en-us/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/sake/', '/en-us/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/pastis/', '/en-us/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vermouth/', '/en-us/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/porto/', '/en-us/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/pineau-des-charentes/', '/en-us/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/marsala/', '/en-us/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/arak/', '/en-us/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/raki/', '/en-us/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/ouzo/', '/en-us/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/schnaps/', '/en-us/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/aquavit/', '/en-us/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/sambuca/', '/en-us/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/amaretto/', '/en-us/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/triple-sec/', '/en-us/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/marasquin/', '/en-us/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/manzana/', '/en-us/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/chartreuse/', '/en-us/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/genepi/', '/en-us/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/genievre/', '/en-us/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/bitter/', '/en-us/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/digestif/', '/en-us/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/patxaran/', '/en-us/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/chouchen/', '/en-us/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/hydromel/', '/en-us/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/creme-cassis/', '/en-us/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/biere/', '/en-us/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cidre/', '/en-us/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vins-spiritueux-dessert/', '/en-us/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/bourbon/', '/en-us/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/canadien/', '/en-us/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/francais/', '/en-us/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/indien/', '/en-us/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/irlandais/', '/en-us/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/japonais/', '/en-us/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/whisky/scotch/', '/en-us/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/agricole/', '/en-us/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/ambre/', '/en-us/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/arrange/', '/en-us/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/blanc/', '/en-us/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/cubain/', '/en-us/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/martiniquais/', '/en-us/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/rhum/vieux/', '/en-us/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vodka/francaise/', '/en-us/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vodka/pologne/', '/en-us/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/vodka/russie/', '/en-us/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/champagne/rose/', '/en-us/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/alsace/', '/en-us/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/bourgogne/', '/en-us/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/jura/', '/en-us/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/loire/', '/en-us/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/cremant-rose/', '/en-us/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/cremant/savoie/', '/en-us/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/mousseux/saumur/', '/en-us/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/mousseux/vouvray/', '/en-us/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/cafe/', '/en-us/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/chocolat/', '/en-us/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/herbes/', '/en-us/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/limoncello/', '/en-us/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/liqueur-whisky/', '/en-us/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/', '/en-us/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/plantes/', '/en-us/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/amande/', '/en-us/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/cassis/', '/en-us/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/cerise/', '/en-us/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/citron/', '/en-us/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/framboise/', '/en-us/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/litchi/', '/en-us/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/noix-de-coco/', '/en-us/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/noix/', '/en-us/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/orange/', '/en-us/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/peche/', '/en-us/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/fruits/pomme/', '/en-us/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/plantes/anis/', '/en-us/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/en-gb/liqueurs/plantes/menthe/', '/en-us/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/', '/es/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/', '/es/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vin-rouge/', '/es/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vin-blanc/', '/es/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vin-rose/', '/es/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vin-jaune/', '/es/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vin-orange/', '/es/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/champagne/', '/es/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/prosecco/', '/es/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/', '/es/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cava/', '/es/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/blanquettes-de-limoux/', '/es/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/clairette-de-die/', '/es/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/mousseux/', '/es/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/', '/es/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vodka/', '/es/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cognac/', '/es/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/armagnac/', '/es/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/calvados/', '/es/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/brandy/', '/es/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/eau-de-vie/', '/es/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/grappa/', '/es/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/kirsch/', '/es/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/pisco/', '/es/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cachaca/', '/es/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/lambig/', '/es/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/', '/es/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/gin/', '/es/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/tequila/', '/es/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/mezcal/', '/es/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/sake/', '/es/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/pastis/', '/es/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vermouth/', '/es/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/porto/', '/es/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/pineau-des-charentes/', '/es/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/marsala/', '/es/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/arak/', '/es/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/raki/', '/es/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/ouzo/', '/es/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/schnaps/', '/es/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/aquavit/', '/es/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/sambuca/', '/es/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/amaretto/', '/es/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/triple-sec/', '/es/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/marasquin/', '/es/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/manzana/', '/es/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/chartreuse/', '/es/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/genepi/', '/es/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/genievre/', '/es/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/bitter/', '/es/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/digestif/', '/es/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/patxaran/', '/es/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/chouchen/', '/es/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/hydromel/', '/es/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/creme-cassis/', '/es/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/biere/', '/es/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cidre/', '/es/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vins-spiritueux-dessert/', '/es/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/bourbon/', '/es/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/canadien/', '/es/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/francais/', '/es/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/indien/', '/es/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/irlandais/', '/es/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/japonais/', '/es/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/whisky/scotch/', '/es/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/agricole/', '/es/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/ambre/', '/es/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/arrange/', '/es/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/blanc/', '/es/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/cubain/', '/es/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/martiniquais/', '/es/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/rhum/vieux/', '/es/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vodka/francaise/', '/es/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vodka/pologne/', '/es/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/vodka/russie/', '/es/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/champagne/rose/', '/es/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/alsace/', '/es/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/bourgogne/', '/es/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/jura/', '/es/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/loire/', '/es/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/cremant-rose/', '/es/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/cremant/savoie/', '/es/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/mousseux/saumur/', '/es/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/mousseux/vouvray/', '/es/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/cafe/', '/es/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/chocolat/', '/es/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/herbes/', '/es/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/limoncello/', '/es/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/liqueur-whisky/', '/es/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/', '/es/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/plantes/', '/es/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/amande/', '/es/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/cassis/', '/es/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/cerise/', '/es/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/citron/', '/es/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/framboise/', '/es/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/litchi/', '/es/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/noix-de-coco/', '/es/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/noix/', '/es/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/orange/', '/es/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/peche/', '/es/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/fruits/pomme/', '/es/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/plantes/anis/', '/es/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/es-me/liqueurs/plantes/menthe/', '/es/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/', '/pt/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/', '/pt/whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vin-rouge/', '/pt/vin-rouge/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vin-blanc/', '/pt/vin-blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vin-rose/', '/pt/vin-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vin-jaune/', '/pt/vin-jaune/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vin-orange/', '/pt/vin-orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/champagne/', '/pt/champagne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/prosecco/', '/pt/prosecco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/', '/pt/cremant/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cava/', '/pt/cava/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/blanquettes-de-limoux/', '/pt/blanquettes-de-limoux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/clairette-de-die/', '/pt/clairette-de-die/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/mousseux/', '/pt/mousseux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/', '/pt/rhum/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vodka/', '/pt/vodka/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cognac/', '/pt/cognac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/armagnac/', '/pt/armagnac/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/calvados/', '/pt/calvados/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/brandy/', '/pt/brandy/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/eau-de-vie/', '/pt/eau-de-vie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/grappa/', '/pt/grappa/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/kirsch/', '/pt/kirsch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/pisco/', '/pt/pisco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cachaca/', '/pt/cachaca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/lambig/', '/pt/lambig/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/', '/pt/liqueurs/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/gin/', '/pt/gin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/tequila/', '/pt/tequila/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/mezcal/', '/pt/mezcal/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/sake/', '/pt/sake/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/pastis/', '/pt/pastis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vermouth/', '/pt/vermouth/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/porto/', '/pt/porto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/pineau-des-charentes/', '/pt/pineau-des-charentes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/marsala/', '/pt/marsala/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/arak/', '/pt/arak/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/raki/', '/pt/raki/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/ouzo/', '/pt/ouzo/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/schnaps/', '/pt/schnaps/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/aquavit/', '/pt/aquavit/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/sambuca/', '/pt/sambuca/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/amaretto/', '/pt/amaretto/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/triple-sec/', '/pt/triple-sec/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/marasquin/', '/pt/marasquin/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/manzana/', '/pt/manzana/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/chartreuse/', '/pt/chartreuse/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/genepi/', '/pt/genepi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/genievre/', '/pt/genievre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/bitter/', '/pt/bitter/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/digestif/', '/pt/digestif/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/patxaran/', '/pt/patxaran/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/chouchen/', '/pt/chouchen/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/hydromel/', '/pt/hydromel/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/creme-cassis/', '/pt/creme-cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/biere/', '/pt/biere/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cidre/', '/pt/cidre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vins-spiritueux-dessert/', '/pt/vins-spiritueux-dessert/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/bourbon/', '/pt/whisky/bourbon/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/canadien/', '/pt/whisky/canadien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/francais/', '/pt/whisky/francais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/indien/', '/pt/whisky/indien/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/irlandais/', '/pt/whisky/irlandais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/japonais/', '/pt/whisky/japonais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/whisky/scotch/', '/pt/whisky/scotch/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/agricole/', '/pt/rhum/agricole/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/ambre/', '/pt/rhum/ambre/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/arrange/', '/pt/rhum/arrange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/blanc/', '/pt/rhum/blanc/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/cubain/', '/pt/rhum/cubain/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/martiniquais/', '/pt/rhum/martiniquais/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/rhum/vieux/', '/pt/rhum/vieux/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vodka/francaise/', '/pt/vodka/francaise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vodka/pologne/', '/pt/vodka/pologne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/vodka/russie/', '/pt/vodka/russie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/champagne/rose/', '/pt/champagne/rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/alsace/', '/pt/cremant/alsace/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/bourgogne/', '/pt/cremant/bourgogne/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/jura/', '/pt/cremant/jura/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/loire/', '/pt/cremant/loire/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/cremant-rose/', '/pt/cremant/cremant-rose/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/cremant/savoie/', '/pt/cremant/savoie/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/mousseux/saumur/', '/pt/mousseux/saumur/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/mousseux/vouvray/', '/pt/mousseux/vouvray/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/cafe/', '/pt/liqueurs/cafe/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/chocolat/', '/pt/liqueurs/chocolat/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/herbes/', '/pt/liqueurs/herbes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/limoncello/', '/pt/liqueurs/limoncello/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/liqueur-whisky/', '/pt/liqueurs/liqueur-whisky/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/', '/pt/liqueurs/fruits/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/plantes/', '/pt/liqueurs/plantes/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/amande/', '/pt/liqueurs/fruits/amande/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/cassis/', '/pt/liqueurs/fruits/cassis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/cerise/', '/pt/liqueurs/fruits/cerise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/citron/', '/pt/liqueurs/fruits/citron/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/framboise/', '/pt/liqueurs/fruits/framboise/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/litchi/', '/pt/liqueurs/fruits/litchi/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/noix-de-coco/', '/pt/liqueurs/fruits/noix-de-coco/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/noix/', '/pt/liqueurs/fruits/noix/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/orange/', '/pt/liqueurs/fruits/orange/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/peche/', '/pt/liqueurs/fruits/peche/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/fruits/pomme/', '/pt/liqueurs/fruits/pomme/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/plantes/anis/', '/pt/liqueurs/plantes/anis/', 301) ON CONFLICT (from_path) DO NOTHING;
+INSERT INTO redirects (from_path, to_path, status_code) VALUES ('/pt-br/liqueurs/plantes/menthe/', '/pt/liqueurs/plantes/menthe/', 301) ON CONFLICT (from_path) DO NOTHING;
+
+COMMIT;

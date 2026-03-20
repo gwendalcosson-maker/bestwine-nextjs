@@ -1,0 +1,462 @@
+{
+  "scraped_date": "2026-03-18",
+  "source": "bestwine.online",
+  "pages": {
+    "homepage": {
+      "url": "https://bestwine.online/fr/",
+      "meta": {
+        "title": "Bestwine \u2022 Online, vins et spiritueux des restaurants \u00e9toil\u00e9s !",
+        "description": "Meilleurs vins et spiritueux s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "hero_tagline": "La carte des meilleurs vins et spiritueux des restaurants gastronomiques \u00e9toil\u00e9s en ligne",
+      "hero_image": "bestwine-scaled.jpg",
+      "mission_statement": "D\u00e9couvrez des vins et spiritueux s\u00e9lectionn\u00e9s par les chefs et sommeliers des restaurants gastronomiques \u00e9toil\u00e9s.",
+      "value_proposition": "Seules les r\u00e9f\u00e9rences de vins et spiritueux commercialis\u00e9es en ligne vous sont propos\u00e9es pour vous permettre de les acheter facilement.",
+      "categories": {
+        "wines": ["Vin rouge", "Vin blanc", "Vin ros\u00e9", "Vin jaune", "Vin orange", "Champagne", "Porto", "Marsala", "Prosecco", "Cava", "Mousseux", "Clairette de Die"],
+        "spirits": ["Cognac", "Gin", "Rhum", "Cacha\u00e7a", "Vodka", "Whisky", "Sak\u00e9", "Armagnac", "Calvados", "Liqueurs", "Schnaps", "Kirsch", "Geni\u00e8vre", "Grappa", "Raki", "Pisco", "Ouzo", "Arak", "Brandy"],
+        "other_beverages": ["Pastis", "Vermouth", "Tequila", "Mezcal", "Aquavit", "Cidre", "Bi\u00e8re", "Vin de noix", "Vin d'orange", "Chouchen", "Hydromel"]
+      },
+      "featured_sections": [
+        {"name": "Eau-de-vie", "image": "eau-de-vie-200x300.jpg"},
+        {"name": "Dessert", "image": "dessert-169x300.jpg"},
+        {"name": "Digestifs", "image": "digestif-restaurant-gastronomique-200x300.jpg"},
+        {"name": "Ap\u00e9ritifs", "image": "aperitif-200x300.jpg"}
+      ],
+      "icons": [
+        {"image": "Icone1.gif", "text": "Trouvez les meilleurs vins"},
+        {"image": "Icone2.gif", "text": "Achetez la meilleure bouteille"}
+      ],
+      "creator": "Gwendal, amateur de vins et spiritueux"
+    },
+
+    "whisky": {
+      "url": "https://bestwine.online/fr/whisky/",
+      "meta": {
+        "title": "Meilleur whisky \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs whiskys s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 5, "total_votes": 5},
+      "featured_products": [
+        {
+          "name": "Whisky Talisker",
+          "origin": "Scotland \u2013 Isle of Skye",
+          "type": "Single malt",
+          "age": "10 years",
+          "restaurants_count": 4,
+          "image": "whisky-talisker.jpg"
+        },
+        {
+          "name": "Whisky Hibiki",
+          "origin": "Japan",
+          "type": "Blended",
+          "age": "Non-vintage",
+          "restaurants_count": 4,
+          "image": "whisky-suntory-japanese-hibiki.jpg"
+        },
+        {
+          "name": "Whisky Macallan Fine Oak",
+          "origin": "Scotland \u2013 Speyside",
+          "type": "Single malt",
+          "age": "12 years",
+          "restaurants_count": 4,
+          "image": "macallan-fine-Oak.jpg"
+        }
+      ],
+      "database_entries": [
+        {"brand": "Nikka Taketsuru", "origin": "Japan", "age": "17 ans", "type": "Single Malt", "abv": "43\u00b0", "restaurants": ["Clos des Sens", "Odette"]},
+        {"brand": "Elijah Craig", "origin": "USA", "age": "18 ans", "type": "Bourbon Single Barrel", "abv": "69\u00b0", "restaurants": ["Odette", "Core by Clare Smith"]},
+        {"brand": "Talisker", "origin": "Scotland (Skye)", "age": "10 ans", "type": "Single malt", "abv": "46\u00b0", "restaurants": ["Clos des Sens", "Odette", "Core by Clare Smith", "Beaumani\u00e8re"]},
+        {"brand": "Hibiki", "origin": "Japan", "age": "17 ans", "type": "Blended", "abv": "43\u00b0", "restaurants": ["Yannick Alleno", "Core by Clare Smith", "Beaumani\u00e8re", "The Dorchester"]},
+        {"brand": "Yamazaki", "origin": "Japan", "age": "18 ans", "type": "Single Malt", "abv": "43\u00b0", "restaurants": ["Yannick Alleno", "Core by Clare Smith", "The Dorchester"]},
+        {"brand": "Laphroaig", "origin": "Scotland (Islay)", "age": "10 ans", "type": "Single Malt", "abv": null, "restaurants": ["Odette", "Core by Clare Smith", "The Dorchester"]},
+        {"brand": "Macallan Fine Oak", "origin": "Scotland (Speyside)", "age": "12 ans", "type": "Single Malt", "abv": null, "restaurants": ["Odette", "Core by Clare Smith", "The Dorchester", "The Fat Duck"]},
+        {"brand": "Highland Park", "origin": "Scotland (Orkney)", "age": "18 ans", "type": "Single Malt", "abv": "43\u00b0", "restaurants": ["Core by Clare Smith", "The Fat Duck"]},
+        {"brand": "Bowmore", "origin": "Scotland (Islay)", "age": null, "type": "Single Malt", "abv": null, "restaurants": []},
+        {"brand": "Caol Ila", "origin": "Scotland (Islay)", "age": null, "type": "Single Malt", "abv": null, "restaurants": []},
+        {"brand": "Lagavulin", "origin": "Scotland (Islay)", "age": null, "type": "Single Malt", "abv": null, "restaurants": []},
+        {"brand": "Ardbeg", "origin": "Scotland (Islay)", "age": null, "type": "Single Malt", "abv": null, "restaurants": []},
+        {"brand": "Glenmorangie", "origin": "Scotland (Highland)", "age": null, "type": "Single Malt", "abv": null, "restaurants": []},
+        {"brand": "Dalmore", "origin": "Scotland (Highland)", "age": null, "type": "Single Malt", "abv": null, "restaurants": []},
+        {"brand": "Bushmills", "origin": "Ireland", "age": null, "type": null, "abv": null, "restaurants": []},
+        {"brand": "Jameson", "origin": "Ireland", "age": null, "type": null, "abv": null, "restaurants": []},
+        {"brand": "Redbreast", "origin": "Ireland", "age": null, "type": null, "abv": null, "restaurants": []},
+        {"brand": "Bulleit", "origin": "USA", "age": null, "type": "Bourbon", "abv": null, "restaurants": []},
+        {"brand": "Woodford Reserve", "origin": "USA", "age": null, "type": "Bourbon", "abv": null, "restaurants": []},
+        {"brand": "Jack Daniel's", "origin": "USA", "age": null, "type": null, "abv": null, "restaurants": []},
+        {"brand": "Canadian Club", "origin": "Canada", "age": null, "type": null, "abv": null, "restaurants": []},
+        {"brand": "Crown Royal", "origin": "Canada", "age": null, "type": null, "abv": null, "restaurants": []}
+      ],
+      "subcategories": ["Whisky \u00e9cossais Scotch", "Whisky irlandais", "Whiskys japonais", "Whiskys bourbons", "Whisky canadien", "Whisky indien", "Whiskys fran\u00e7ais"],
+      "editorial": {
+        "find_whiskys": "D\u00e9couvrez des whiskys s\u00e9lectionn\u00e9s par les chefs et sommeliers des restaurants gastronomiques \u00e9toil\u00e9s. Une s\u00e9lection par des professionnels cr\u00e9dibles et l\u00e9gitimes pour vous permettre de trouver votre whisky pr\u00e9f\u00e9r\u00e9.",
+        "buy_whiskys": "Nous vous guidons vers les offres commerciales et promotionnelles les plus int\u00e9ressantes en ligne. Vous pouvez acheter les meilleurs whiskys en toute confiance gr\u00e2ce \u00e0 un r\u00e9f\u00e9rentiel fiable et impartial.",
+        "methodology": "Bestwine \u2022 Online r\u00e9f\u00e9rence les whiskys pr\u00e9sents sur la carte des vins et dans les caves des restaurants gastronomiques les plus connus et reconnus \u00e0 travers le monde.",
+        "update_process": "Le r\u00e9f\u00e9rentiel des meilleurs whiskys est mis \u00e0 jour quotidiennement en int\u00e9grant de nouvelles r\u00e9f\u00e9rences qui proviennent des cartes des vins des restaurants gastronomiques.",
+        "why_choose": "Les chefs et sommeliers des restaurants gastronomiques sont les garants de l'excellence de la gastronomie en proposant les meilleurs produits, mets et boissons dans leurs restaurants.",
+        "why_buy": "Bestwine \u2022 Online s'engage \u00e0 r\u00e9f\u00e9rencer les meilleurs whiskys et \u00e0 vous guider vers les offres commerciales en ligne les plus attractives pour que vous puissiez les acheter au meilleur prix.",
+        "personal_statement": "Je suis un amateur de whisky et je ne me d\u00e9finirais jamais comme un expert de cette boisson alcoolis\u00e9e. Je ne me positionne aucunement comme conseiller. Je laisse la place pour cela \u00e0 l'expertise des chefs et sommeliers gastronomiques..."
+      },
+      "howto_steps": [
+        "Select filtering criteria (brand, origin, age, price, type)",
+        "Sort whiskys by your preferred criteria",
+        "Select your whisky reference",
+        "Buy online at the best price"
+      ]
+    },
+
+    "vin_rouge": {
+      "url": "https://bestwine.online/fr/vin-rouge/",
+      "meta": {
+        "title": "Meilleur vin rouge \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs vins rouges s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s"
+      },
+      "rating": {"score": 5, "total_votes": 6},
+      "featured_image": "https://bestwine.online/wp-content/uploads/2021/09/Chateau-Cheval-Blanc-saint-emilion.jpg",
+      "featured_wines": [
+        {"name": "Ch\u00e2teau Montrose", "origin": "France \u2013 Bordeaux \u2013 Saint-Est\u00e8phe", "vintage": 2011, "restaurant": "Clos Des Sens"},
+        {"name": "Ch\u00e2teau de Beaucastel", "origin": "France \u2013 C\u00f4te du Rh\u00f4ne \u2013 Ch\u00e2teauneuf du Pape", "vintage": 2017, "restaurant": "La Prieur\u00e9"},
+        {"name": "Ch\u00e2teau Cos D'Estournel", "origin": "France \u2013 Bordeaux \u2013 M\u00e9doc", "vintage": 2014, "restaurant": "La Bouitte"},
+        {"name": "Ch\u00e2teau Cheval Blanc", "origin": "France \u2013 Bordeaux \u2013 Saint-Emilion", "vintage": 2006, "restaurant": "The Fat Duck"},
+        {"name": "P\u00e9trus", "origin": "France \u2013 Bordeaux \u2013 Pomerol", "vintage": 2007, "restaurant": "Alain Ducasse at The Dorchester"},
+        {"name": "Clos du Mont-Olivet", "origin": "France \u2013 C\u00f4te du Rh\u00f4ne \u2013 Ch\u00e2teauneuf du Pape", "vintage": 2011, "restaurant": "Beaumani\u00e8re"},
+        {"name": "Ch\u00e2teau Mouton Rothschild", "origin": "France \u2013 Bordeaux \u2013 Pauillac", "vintage": 2011, "restaurant": "Cheval Blanc by Peter Knogl"},
+        {"name": "Clos Rougeard \u2013 Les Poyeux", "origin": "France \u2013 Vall\u00e9e de la Loire \u2013 Saumur-Champigny", "vintage": 2015, "restaurant": "Quince"},
+        {"name": "Domaine Alain Graillot", "origin": "France \u2013 C\u00f4te du Rh\u00f4ne \u2013 Crozes Hermitage", "vintage": 2017, "restaurant": "Caprice"}
+      ]
+    },
+
+    "champagne": {
+      "url": "https://bestwine.online/fr/champagne/",
+      "meta": {
+        "title": "Meilleur champagne \u00e0 la carte des restaurants gastronomiques !",
+        "description": "Meilleurs champagnes s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 4.9, "total_votes": 14},
+      "featured_products": [
+        {"name": "Champagne Krug Grande Cuv\u00e9e", "origin": "France \u2013 Reims", "type": "Brut", "restaurants_count": 15, "image": "champagne-krug-grande-cuvee.jpg"},
+        {"name": "Champagne Salon", "origin": "France \u2013 Le Mesnil sur Oger", "type": "Brut", "restaurants_count": 15, "image": "champagne-salon.jpg"},
+        {"name": "Champagne Dom P\u00e9rignon", "origin": "France \u2013 Epernay", "type": "Brut", "restaurants_count": 14, "image": "champagne-dom-perignon.jpg"},
+        {"name": "Champagne Louis Roederer", "origin": "France \u2013 Reims", "type": "Brut", "restaurants_count": 14}
+      ],
+      "best_value": {"name": "Champagne Veuve Clicquot", "origin": "France \u2013 Reims", "type": "Brut", "restaurants_count": 10, "note": "le champagne le moins cher et le plus souvent pr\u00e9sent sur la carte"},
+      "brands_list": [
+        "Agrapart & Fils (Avize)", "Billecart-Salmon", "Bollinger (Ay)", "Charles Heidsieck",
+        "Deutz", "Egly-Ouriet (Ambonnay)", "Jacquesson", "Jacques Selosse (Avize)",
+        "Krug (Reims)", "Laurent Perrier (Tours-sur-Marne)", "Mo\u00ebt & Chandon (Epernay)",
+        "Pierre Jou\u00ebt", "Pol Roger", "Pommery (Reims)", "Ruinart", "Taittinger"
+      ],
+      "production_steps": [
+        "Grape harvesting", "Pressing", "Fermentation", "Bottling",
+        "Maturation on laths", "Disgorging", "Dosage addition"
+      ],
+      "consumption_guidelines": {
+        "glass": "champagne flute",
+        "temperature": "6-8\u00b0C",
+        "steps": ["Opening technique", "Pouring method", "Aroma appreciation", "Moderate consumption"]
+      }
+    },
+
+    "cognac": {
+      "url": "https://bestwine.online/fr/cognac/",
+      "meta": {
+        "title": "Meilleur cognac \u00e0 la carte des restaurants gastronomiques !",
+        "description": "Meilleurs cognacs s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 5, "total_votes": 9},
+      "featured_products": [
+        {"rank": 1, "brand": "Hennessy XO", "age_type": "XO", "origin": "France (Poitou-Charentes)", "abv": "40\u00b0", "restaurants_count": 5, "image": "cognac-hennessy-xo.jpg"},
+        {"rank": 2, "brand": "Martell XO", "age_type": "XO", "origin": "France (Poitou-Charentes)", "abv": "40\u00b0", "restaurants_count": 2, "image": "cognac-martell-xo.jpg"},
+        {"rank": 2, "brand": "Courvoisier XO", "age_type": "XO", "origin": "France (Poitou-Charentes)", "abv": "40\u00b0", "restaurants_count": 2, "image": "cognac-courvoisier-xo-imperiale.jpg"},
+        {"rank": 2, "brand": "Frapin XO", "age_type": "XO", "origin": "France (Poitou-Charentes)", "abv": "40\u00b0", "restaurants_count": 2, "image": "FRAPIN-COGNAC.jpg"}
+      ],
+      "database_entries": [
+        {"brand": "Vallein Tercinier XO", "type": "Fine Champagne", "abv": "40\u00b0", "restaurant": "Clos des Sens"},
+        {"brand": "Leyrat XO", "restaurant": "Beaumani\u00e8re"},
+        {"brand": "Leyrat Extra Glory", "age": "40 years", "abv": "45\u00b0", "restaurant": "Beaumani\u00e8re"},
+        {"brand": "Hennessy Paradis XO", "restaurant": "Core by Clare Smyth"},
+        {"brand": "Delamain XO", "type": "Grande Champagne", "restaurant": "The Fat Duck"},
+        {"brand": "Hine Antique XO", "restaurant": "The Dorchester"},
+        {"brand": "Remy Martin XO", "restaurant": "The Dorchester"},
+        {"brand": "A.E. Dor Vieille R\u00e9serve N\u00b06", "restaurant": "Multiple"},
+        {"brand": "Frapin Ch\u00e2teau de Fontpinot XO", "restaurant": "The Dorchester"},
+        {"brand": "Lh\u00e9raud XO", "type": "Grande Champagne & Fins Bois variants"},
+        {"brand": "Ch\u00e2teau de Beaulon 1982"},
+        {"brand": "Audry Exception & R\u00e9serve Aristide"}
+      ],
+      "restaurants_referenced": [
+        "Restaurant Beaumani\u00e8re (France)",
+        "The Dorchester (United Kingdom)",
+        "Core by Clare Smyth (United Kingdom)",
+        "The Fat Duck (United Kingdom)",
+        "Le Calandre (Italy)",
+        "Rutz (Germany)",
+        "Clos des Sens (France)",
+        "La Prieur\u00e9 (France)",
+        "Odette (Singapore)",
+        "Frederikshoj (Denmark)"
+      ],
+      "classification": {
+        "by_age": {
+          "XO": "Minimum 10 years in oak",
+          "VSOP": "Minimum 5 years in oak",
+          "VS": "Minimum 2 years in oak"
+        },
+        "by_cru": ["Grande Champagne", "Petite Champagne", "Fine Champagne", "Borderies", "Fins Bois", "Bons Bois", "Bois ordinaires"]
+      },
+      "images": [
+        "https://bestwine.online/wp-content/uploads/2021/04/cognac-hennessy-xo.jpg",
+        "https://bestwine.online/wp-content/uploads/2021/07/henessy-cognac.jpg",
+        "https://bestwine.online/wp-content/uploads/2021/04/cognac-martell-xo.jpg",
+        "https://bestwine.online/wp-content/uploads/2021/04/cognac-courvoisier-xo-imperiale.jpg",
+        "https://bestwine.online/wp-content/uploads/2021/07/FRAPIN-COGNAC.jpg",
+        "https://bestwine.online/wp-content/uploads/2021/04/cognac-vallein-tercinier.jpg"
+      ],
+      "editorial_definition": "Le cognac est une eau-de-vie de vin prot\u00e9g\u00e9e par une Appellation d'origine contr\u00f4l\u00e9e (AOC). Production exclusively in France, geographic region: Charente, Charente-Maritime, portions of Dordogne. UNESCO recognition of cognac-making as intangible cultural heritage (2020)."
+    },
+
+    "rhum": {
+      "url": "https://bestwine.online/fr/rhum/",
+      "meta": {
+        "title": "Meilleur rhum \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs rhums s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "featured_products": [
+        {"name": "Rhum Zacapa", "origin": "Guatemala", "age": "23 years", "abv": "40\u00b0", "restaurants_count": 4, "image": "rhum-zacapa-23.jpg"},
+        {"name": "Rhum J.M. Cuv\u00e9e 1845", "origin": "Martinique", "type": "agricultural", "restaurants_count": 3, "image": "rhum-jm.jpg"},
+        {"name": "Rhum Caroni - No Smoking", "origin": "Trinidad & Tobago", "vintage": 1998, "abv": "55\u00b0", "restaurants_count": 2, "image": "Rhum-caroni-no-smocking-1998.jpg"},
+        {"name": "Rhum Appleton", "origin": "Jamaica", "age": "21 years", "abv": "43\u00b0", "image": "RHUM-APPLETON-21.jpg"},
+        {"name": "Rhum El Eldorado", "origin": "Guyana", "age": "15 years", "image": "el-eldorado.jpg"},
+        {"name": "Rhum Diplomatico Reserva Exclusiva", "origin": "Venezuela", "age": "15 years", "image": "diplomatico-reserva-exclusiva.jpg"}
+      ],
+      "additional_products": [
+        {"name": "Ferroni", "origin": "France"},
+        {"name": "Oliver & Oliver", "origin": "Haiti", "vintage": 1985},
+        {"name": "Centenario", "origin": "Costa Rica", "age": "20 years"},
+        {"name": "Caroni Extra Strong", "age": "17 years", "abv": "55\u00b0"},
+        {"name": "Neisson Bio", "origin": "Martinique", "type": "agricultural"},
+        {"name": "Bielle", "origin": "Marie Galante", "type": "amber"},
+        {"name": "Longueteau", "origin": "Guadeloupe", "type": "XO"},
+        {"name": "Rivi\u00e8re Bel'Air La Favorite", "origin": "Martinique"},
+        {"name": "Pyrat Reserve", "origin": "Guyana", "type": "XO"},
+        {"name": "Flor De Cana", "age": "18 years"},
+        {"name": "Dictador", "origin": "Colombia", "type": "XO"}
+      ],
+      "database_entries": [
+        {"brand": "Clairin Sajous", "origin": "Haiti", "vintage": 2018, "abv": "51\u00b0"},
+        {"brand": "Cl\u00e9ment Tr\u00e8s vieux", "origin": "Martinique", "type": "XO", "abv": "44\u00b0"},
+        {"brand": "Fair", "origin": "Belize", "age": "5 years"},
+        {"brand": "Havana Club", "origin": "Cuba", "age": "7 years"},
+        {"brand": "XM Millenium", "origin": "Guyana", "age": "12 years"},
+        {"brand": "Matusalem Gran Reserva", "origin": "Dominican Republic", "age": "12 years"},
+        {"brand": "Brugal", "origin": "Dominican Republic", "type": "XO"},
+        {"brand": "Kill Devil Single Cask", "origin": "Trinidad & Tobago", "vintage": 1998, "abv": "46\u00b0"},
+        {"brand": "Foursquare Habitation Vellier", "origin": "Barbados", "vintage": 2013, "abv": "64\u00b0"},
+        {"brand": "Velier Royal Navy", "origin": "Caribbean", "abv": "57\u00b0"}
+      ],
+      "subcategories": ["White rum", "Amber rum", "Aged rum", "Agricultural rum", "Arranged rum", "Cuban rum", "Martinique rum"]
+    },
+
+    "gin": {
+      "url": "https://bestwine.online/fr/gin/",
+      "meta": {
+        "title": "Meilleur gin \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs gins s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 5, "total_votes": 19},
+      "featured_products": [
+        {"name": "Tanqueray Ten", "origin": "Scotland", "abv": "47\u00b0", "restaurants_count": 7},
+        {"name": "Hendrick's", "origin": "Scotland (Lowlands)", "abv": "41\u00b0", "restaurants_count": 6},
+        {"name": "Monkey 47", "origin": "Germany", "abv": "47\u00b0", "restaurants_count": 3},
+        {"name": "Bombay Sapphire", "origin": "England", "abv": "40\u00b0", "restaurants_count": 3},
+        {"name": "East London Liquor Co.", "origin": "England", "abv": "40\u00b0", "restaurants_count": 2},
+        {"name": "Copperhead", "origin": "Belgium", "abv": "40\u00b0", "restaurants_count": 2}
+      ],
+      "additional_brands": ["Ableforth's", "Dodd's", "Brockmans", "Gordon's", "Beefeater 24", "Bulldog", "Roku", "Citadelle"],
+      "restaurants_referenced": [
+        "Clos des Sens (France)",
+        "Yannick Alleno (France)",
+        "Beaumani\u00e8re (France)",
+        "Core by Clare Smyth (UK)",
+        "The Dorchester (UK)",
+        "The Fat Duck (UK)",
+        "Le Calandre (Italy)",
+        "Odette (Singapore)",
+        "La Prieur\u00e9 (France)"
+      ],
+      "editorial_history": "Gin originated in 17th century Netherlands, distinguishing between genever and London Dry Gin styles.",
+      "serving_notes": "Typically served as an aperitif in cocktails (gin tonic). Rarely served pure in gastronomic restaurants. Occasional digestif usage. Sometimes used in cooking for sauces.",
+      "images": ["gin-Hendricks.jpg", "Gin-tanqueray-ten.jpg", "gin-monkey-47.jpg", "gin-bombay-saphire.jpg"]
+    },
+
+    "vin_blanc": {
+      "url": "https://bestwine.online/fr/vin-blanc/",
+      "meta": {
+        "title": "Meilleur vin blanc \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs vins blancs s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 3.8, "total_votes": 5},
+      "featured_wines": [
+        {"producer": "Domaine Dupraz \u2013 Montracul", "origin": "France \u2013 Savoie \u2013 Jongieux", "vintage": 2016, "restaurant": "Clos des Sens"},
+        {"producer": "Ch\u00e2teau de la Mar \u2013 Le Golliat", "origin": "France \u2013 Savoie \u2013 Jongieux", "vintage": 2012, "restaurant": "Clos des Sens"},
+        {"producer": "Elisabetta Foradori \u2013 Fontanasanta Nosiola", "origin": "Italy \u2013 Trantin", "vintage": 2016, "restaurant": "Clos des Sens"},
+        {"producer": "Domaine Weinbach", "origin": "France \u2013 Alsace \u2013 Gewurztraminer", "vintage": 2002, "restaurant": "Beaumani\u00e8re"},
+        {"producer": "Ch\u00e2teau de Fargues", "origin": "France \u2013 Bordeaux \u2013 Sauterne", "vintage": 2001, "restaurant": "Beaumani\u00e8re"},
+        {"producer": "Domaine Weinbach Clos des Capucins", "origin": "France \u2013 Alsace \u2013 Pinot Blanc", "vintage": 2015, "restaurant": "La Bouitte"},
+        {"producer": "Domaine Robert Denogent", "origin": "France \u2013 Bourgogne \u2013 Pouilly Fuiss\u00e9", "vintage": 2017, "restaurant": "La Bouitte"},
+        {"producer": "Domaine Etienne Sauzet", "origin": "France \u2013 Bourgogne \u2013 Chardonnay", "vintage": 2014, "restaurant": "La Bouitte"},
+        {"producer": "P.A. Jaboulet", "origin": "France \u2013 Vall\u00e9e du Rh\u00f4ne \u2013 Hermitage", "vintage": 2017, "restaurant": "La Prieur\u00e9"},
+        {"producer": "Ch\u00e2teau Simone", "origin": "France \u2013 Provence \u2013 Palette", "vintage": 2017, "restaurant": "La Prieur\u00e9"}
+      ],
+      "featured_image": "domaine-robert-denogent.jpg"
+    },
+
+    "vodka": {
+      "url": "https://bestwine.online/fr/vodka/",
+      "meta": {
+        "title": "Meilleure vodka \u00e0 la carte des restaurants gastronomiques !",
+        "description": "Meilleures vodkas s\u00e9lectionn\u00e9es par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 4.9, "total_votes": 12},
+      "featured_products": [
+        {"rank": 1, "brand": "Grey Goose", "origin": "France", "abv": "40\u00b0", "restaurants_count": 6},
+        {"rank": 2, "brand": "Stolichnaya Elit", "origin": "Russia", "abv": "40\u00b0", "restaurants_count": 4},
+        {"rank": 3, "brand": "Belv\u00e9d\u00e8re", "origin": "Poland", "abv": "40\u00b0", "restaurants_count": 3},
+        {"rank": 4, "brand": "Absolut", "origin": "Sweden", "abv": "40\u00b0", "restaurants_count": 2}
+      ],
+      "additional_brands": ["Beluga Noble", "Wyborowa Exquisite", "Partisan", "Haku", "Snow L\u00e9opard", "Black Cow", "Konik's Tail", "East London Liquor Company"]
+    },
+
+    "whisky_scotch": {
+      "url": "https://bestwine.online/fr/whisky/scotch/",
+      "meta": {
+        "title": "Meilleur scotch, whisky \u00e9cossais \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !",
+        "description": "Meilleurs scotchs, whiskys \u00e9cossais s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 4, "total_votes": 2},
+      "featured_products": [
+        {"name": "Talisker", "origin": "Skye Islands", "type": "Single Malt", "age": "10 years", "restaurants_count": 4},
+        {"name": "Macallan Fine Oak", "origin": "Speyside", "type": "Single Malt", "age": "12 years", "restaurants_count": 4},
+        {"name": "Glenkichie", "origin": "Lowlands", "type": "Single Malt", "age": "12 years", "restaurants_count": 2},
+        {"name": "Johnnie Walker Gold Label", "origin": "Highland", "type": "Blended", "age": "15 years"},
+        {"name": "Arran", "origin": "Scotland", "type": "Single Malt", "age": "18 years"},
+        {"name": "Cragganmore", "origin": "Speyside", "type": "Single Malt", "age": "12 years"}
+      ],
+      "editorial_note": "L'\u00c9cosse est une terre de whisky - historical traces dating to 1494. Plus de 10 000 personnes directement employed in Scottish whisky industry.",
+      "additional_brands": ["Great King Street", "Craigellachie", "Glenrothes", "Clynelish"]
+    },
+
+    "whisky_bourbon": {
+      "url": "https://bestwine.online/fr/whisky/bourbon/",
+      "meta": {
+        "title": "Meilleur bourbon \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs whiskys bourbons s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "rating": {"score": 5, "total_votes": 1},
+      "featured_product": {
+        "name": "Whisky Elijah Craig",
+        "origin": "USA",
+        "type": "Straight Bourbon",
+        "age": "12 years",
+        "restaurant": "Loiseau Rive Gauche (France)",
+        "image": "WHISKY-ELIJAH-CRAIG.jpg"
+      },
+      "brands_mentioned": ["Blanton's", "Buffalo Trace", "Elijah Craig", "Four Roses", "Jim Beam", "Knob Creek", "Maker's Mark", "Old Grand-Dad", "Tamdhu", "Wild Turkey", "Woodford Reserve"],
+      "editorial_definition": "Bourbon originated from Bourbon County in Kentucky, production beginning around 1730s. Composition: minimum 51% corn, aged in charred new oak barrels, alcohol content below 80% volume."
+    },
+
+    "rhum_martiniquais": {
+      "url": "https://bestwine.online/fr/rhum/martiniquais/",
+      "meta": {
+        "title": "Meilleur rhum martiniquais des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs rhums martiniquais s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s"
+      },
+      "rating": {"score": 3.5, "total_votes": 2},
+      "featured_products": [
+        {"name": "Rivi\u00e8re Bel'Air La Favorite", "type": "Rhum agricole blanc", "abv": "53\u00b0", "image": "Rhum-martiniquais-Riviere-BelAir-La-Favorite-1024x1024.jpg"},
+        {"name": "JM Cuv\u00e9e 1845", "type": "Rhum agricole blanc", "abv": "42\u00b0", "image": "rhum-jm.jpg"},
+        {"name": "Neisson Bio", "type": "Rhum agricole", "abv": "52\u00b0", "image": "rhum-neisson-bio.jpg"}
+      ],
+      "major_brands": ["Cl\u00e9ment", "Saint-James", "Neisson", "Depaz", "La Mauny", "Trois Rivi\u00e8res", "Duquesne"],
+      "editorial_note": "Martinique produces 85% agricultural rum. Distinction between rhum agricole (fermented cane juice) versus traditional rum (molasses-based). AOC Martinique label."
+    },
+
+    "vin_rose": {
+      "url": "https://bestwine.online/fr/vin-rose/",
+      "meta": {
+        "title": "Meilleur vin ros\u00e9 \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s !",
+        "description": "Meilleurs vins ros\u00e9s s\u00e9lectionn\u00e9s par les chefs et sommeliers \u00e0 la carte des restaurants gastronomiques \u00e9toil\u00e9s \u2b50\ufe0f !"
+      },
+      "top_recommendations": [
+        {"name": "Domaine Tempier", "origin": "France, C\u00f4tes de Provence/Bandol", "abv": "14\u00b0", "restaurants_count": 4, "image": "rose-domaine-tempier.jpg"},
+        {"name": "Ch\u00e2teau D'Esclans - Garrus", "origin": "France, C\u00f4tes de Provence", "abv": "14\u00b0", "restaurants_count": 3}
+      ],
+      "additional_wines": [
+        "Domaine de Fondr\u00e8che (Ventoux)",
+        "Ch\u00e2teau Minuty (C\u00f4tes de Provence)",
+        "Valentini (Cerasuolo d'Abruzzo)",
+        "Ch\u00e2teau d'Esclans (multiple vintages)",
+        "Domaine Tempier (multiple vintages)"
+      ],
+      "restaurants_referenced": ["La Prieur\u00e9", "The Dorchester", "Odette", "Beaumani\u00e8re", "The Fat Duck", "Geranium", "Connaught", "L'Atelier de Jo\u00ebl Robuchon", "Otto e Mezzo", "Quince"]
+    },
+
+    "restaurant_page": {
+      "url": "https://bestwine.online/fr/restaurant/",
+      "meta": {
+        "title": "Offre Bestwine \u2022 Online pour les professionnels des restaurants gastronomiques \u00e9toil\u00e9s"
+      },
+      "note": "This is a B2B professional services page, NOT a restaurant directory. It invites restaurant owners to list their wine cards on the platform.",
+      "editorial": "Bestwine \u2022 Online est la carte des vins en ligne qui r\u00e9f\u00e9rence les vins et spiritueux propos\u00e9s dans les restaurants gastronomiques \u00e9toil\u00e9s du monde entier.",
+      "contact": "contact@agence.media"
+    }
+  },
+
+  "all_restaurants_mentioned": [
+    "Clos des Sens (France)",
+    "Odette (Singapore)",
+    "Core by Clare Smyth (UK)",
+    "Beaumani\u00e8re (France)",
+    "Yannick Alleno (France)",
+    "The Dorchester (UK)",
+    "The Fat Duck (UK)",
+    "La Prieur\u00e9 (France)",
+    "La Bouitte (France)",
+    "Le Calandre (Italy)",
+    "Rutz (Germany)",
+    "Frederikshoj (Denmark)",
+    "Alain Ducasse at The Dorchester (UK)",
+    "Cheval Blanc by Peter Knogl",
+    "Quince",
+    "Caprice",
+    "Loiseau Rive Gauche (France)",
+    "Geranium",
+    "Connaught",
+    "L'Atelier de Jo\u00ebl Robuchon",
+    "Otto e Mezzo"
+  ],
+
+  "common_editorial_template": {
+    "faq_questions": [
+      "Comment sont s\u00e9lectionn\u00e9s les [category] sur Bestwine \u2022 Online ?",
+      "Comment est mis \u00e0 jour le r\u00e9f\u00e9rentiel des meilleurs [category] ?",
+      "Pourquoi choisir une r\u00e9f\u00e9rence de [category] via Bestwine \u2022 Online ?",
+      "Pourquoi acheter votre [category] via Bestwine \u2022 Online ?"
+    ],
+    "faq_answers_template": {
+      "selection": "Bestwine \u2022 Online r\u00e9f\u00e9rence les [category] pr\u00e9sents sur la carte des vins et dans les caves des restaurants gastronomiques les plus connus et reconnus \u00e0 travers le monde.",
+      "updates": "Le r\u00e9f\u00e9rentiel des meilleurs [category] est mis \u00e0 jour quotidiennement en int\u00e9grant de nouvelles r\u00e9f\u00e9rences qui proviennent des cartes des vins des restaurants gastronomiques.",
+      "why_choose": "Les chefs et sommeliers des restaurants gastronomiques sont les garants de l'excellence de la gastronomie en proposant les meilleurs produits, mets et boissons dans leurs restaurants.",
+      "why_buy": "Bestwine \u2022 Online s'engage \u00e0 r\u00e9f\u00e9rencer les meilleurs [category] et \u00e0 vous guider vers les offres commerciales en ligne les plus attractives pour que vous puissiez les acheter au meilleur prix."
+    },
+    "howto_steps": [
+      "S\u00e9lectionnez vos crit\u00e8res de pr\u00e9f\u00e9rence",
+      "Classez les [category] selon vos crit\u00e8res",
+      "S\u00e9lectionnez votre r\u00e9f\u00e9rence",
+      "Achetez en ligne au meilleur prix"
+    ]
+  },
+
+  "image_base_url": "https://bestwine.online/wp-content/uploads/",
+  "logo": "https://bestwine.online/wp-content/uploads/2021/05/Logo_300x100px.gif"
+}
