@@ -11,6 +11,12 @@ import Breadcrumb from '@/components/Breadcrumb'
 import JsonLd from '@/components/JsonLd'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import StickyCTA from '@/components/StickyCTA'
+import ShareButtons from '@/components/ShareButtons'
+import NewsletterSignup from '@/components/NewsletterSignup'
+import BackToTop from '@/components/BackToTop'
+import TableOfContents from '@/components/TableOfContents'
+import RelatedCategories from '@/components/RelatedCategories'
 
 interface PageParams {
   locale: string
@@ -67,6 +73,125 @@ export async function generateMetadata({
   }
 }
 
+// ─── Editorial content parser ───
+
+interface EditorialSection {
+  heading?: string
+  headingId?: string
+  content: string
+}
+
+function parseEditorial(description: string): EditorialSection[] {
+  const sections: EditorialSection[] = []
+  const lines = description.split('\n')
+  let current: EditorialSection = { content: '' }
+
+  for (const line of lines) {
+    if (line.startsWith('## ')) {
+      if (current.content.trim() || current.heading) sections.push(current)
+      const heading = line.replace('## ', '')
+      const headingId = heading
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+      current = { heading, headingId, content: '' }
+    } else {
+      current.content += line + '\n'
+    }
+  }
+  if (current.content.trim() || current.heading) sections.push(current)
+  return sections
+}
+
+function isFounderSection(section: EditorialSection): boolean {
+  const c = section.content.toLowerCase()
+  return (
+    c.includes('gwendal') &&
+    (c.includes('créateur') || c.includes('creator')) &&
+    c.includes('bestwine')
+  )
+}
+
+function renderParagraphs(content: string, isFounder: boolean) {
+  const paragraphs = content
+    .split('\n\n')
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  return paragraphs.map((paragraph, i) => {
+    // Check for list items
+    if (paragraph.includes('\n- ') || paragraph.startsWith('- ')) {
+      const listItems = paragraph.split('\n').filter((l) => l.startsWith('- '))
+      const prefix = paragraph.split('\n').find((l) => !l.startsWith('- ') && l.trim())
+      return (
+        <div key={i} className="mb-6">
+          {prefix && (
+            <p className="text-text-main/80 leading-relaxed mb-3 max-w-3xl" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(prefix) }} />
+          )}
+          <ul className="space-y-2 max-w-3xl">
+            {listItems.map((item, j) => (
+              <li key={j} className="flex items-start gap-3">
+                <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-gold/60 mt-2" />
+                <span
+                  className="text-text-main/80 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(item.replace(/^- /, '')) }}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    // Check for founder statement (last paragraph of last section)
+    if (isFounder && paragraph.includes('Gwendal')) {
+      return (
+        <div
+          key={i}
+          className="border-l-2 border-gold/40 pl-6 py-2 my-8 italic text-center max-w-2xl mx-auto"
+        >
+          <p
+            className="text-text-main/70 leading-relaxed font-inter"
+            dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(paragraph) }}
+          />
+        </div>
+      )
+    }
+
+    return (
+      <p
+        key={i}
+        className="text-text-main/80 leading-relaxed mb-6 max-w-3xl"
+        dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(paragraph) }}
+      />
+    )
+  })
+}
+
+function renderInlineMarkdown(text: string): string {
+  // Bold: **text** → <strong>text</strong>
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-text-main">$1</strong>')
+}
+
+// ─── Spirits vs Wines grouping for related categories ───
+
+const spiritSlugs = new Set([
+  'whisky', 'cognac', 'rhum', 'gin', 'vodka', 'scotch', 'bourbon',
+  'rhum-martiniquais', 'tequila', 'mezcal', 'armagnac', 'calvados',
+])
+const wineSlugs = new Set([
+  'vin-rouge', 'vin-blanc', 'vin-rose', 'champagne',
+])
+
+function getRelatedSlugs(slug: string): Set<string> {
+  if (spiritSlugs.has(slug)) return spiritSlugs
+  if (wineSlugs.has(slug)) return wineSlugs
+  // Fallback: return all
+  return new Set([...spiritSlugs, ...wineSlugs])
+}
+
 export default async function CategoryPage({
   params,
 }: {
@@ -95,10 +220,22 @@ export default async function CategoryPage({
     { label: name },
   ]
 
-  // Parse editorial description into paragraphs
-  const descriptionParagraphs = translation?.description
-    ? translation.description.split('\n\n').filter((p: string) => p.trim())
-    : []
+  // Parse editorial content from description
+  const rawDescription = translation?.description ?? ''
+  const editorialSections = parseEditorial(rawDescription)
+
+  // Extract intro paragraph (first section without heading)
+  const introSection = editorialSections.length > 0 && !editorialSections[0].heading
+    ? editorialSections[0]
+    : null
+  const contentSections = introSection
+    ? editorialSections.slice(1)
+    : editorialSections
+
+  // TOC items from headings
+  const tocItems = contentSections
+    .filter((s) => s.heading && s.headingId)
+    .map((s) => ({ id: s.headingId!, label: s.heading! }))
 
   // Build FAQ data from translation messages
   const faqItems = [
@@ -142,12 +279,30 @@ export default async function CategoryPage({
     })),
   }
 
+  // Related categories
+  const allCategories = await getCategories(locale)
+  const relatedSlugs = getRelatedSlugs(category)
+  const relatedCategories = allCategories
+    .filter((c) => c.parent_id === null && relatedSlugs.has(c.slug))
+    .map((c) => ({
+      slug: c.slug,
+      name: c.category_translations[0]?.name ?? c.slug,
+    }))
+
+  const pageUrl = `https://www.bestwine.online/${locale}/${category}`
+
   return (
     <div className="grain-overlay min-h-screen">
       <JsonLd data={generateBreadcrumbSchema(breadcrumbItems, locale)} />
       <JsonLd data={generateItemListSchema(drinks, locale, cat)} />
       <JsonLd data={faqSchema} />
       <JsonLd data={howToSchema} />
+
+      {/* Sticky CTA bar */}
+      <StickyCTA categoryName={name} locale={locale} />
+
+      {/* Back to top */}
+      <BackToTop />
 
       {/* ─── HERO BANNER ─── */}
       <section className="relative bg-gradient-hero py-20 lg:py-28">
@@ -164,9 +319,9 @@ export default async function CategoryPage({
                 {name}
               </h1>
 
-              {descriptionParagraphs.length > 0 && (
+              {introSection && introSection.content.trim() && (
                 <p className="mt-6 text-lg text-muted/80 leading-relaxed font-inter font-light max-w-2xl">
-                  {descriptionParagraphs[0]}
+                  {introSection.content.trim()}
                 </p>
               )}
 
@@ -187,7 +342,7 @@ export default async function CategoryPage({
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-6">
               <h2 className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
-                {tEditorial('about_title', { category: '' }).includes('propos') ? 'Sous-categories' : 'Subcategories'}
+                {locale === 'fr' ? 'Sous-catégories' : 'Subcategories'}
               </h2>
               <div className="flex-1 h-px bg-border/20" />
             </div>
@@ -297,7 +452,7 @@ export default async function CategoryPage({
 
       {/* ─── COMPLETE TABLE ─── Full reference list */}
       {allDrinks.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
+        <section id="references" className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
@@ -383,24 +538,47 @@ export default async function CategoryPage({
         </section>
       )}
 
-      {/* ─── EDITORIAL CONTENT ─── Full description from DB */}
-      {descriptionParagraphs.length > 1 && (
-        <section className="border-t border-border/20 bg-fog/20">
-          <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
-            <AnimatedSection animation="fadeUp">
-              <div className="section-editorial">
-                <h2 className="text-2xl font-playfair font-bold text-text-main mb-8">
-                  {tEditorial('about_title', { category: nameLower })}
-                </h2>
-                <div className="space-y-6">
-                  {descriptionParagraphs.slice(1).map((paragraph: string, i: number) => (
-                    <p key={i} className="text-base font-inter text-text-main/80 leading-[1.9]">
-                      {paragraph}
-                    </p>
-                  ))}
+      {/* ─── FULL EDITORIAL CONTENT ─── Rich content from DB */}
+      {contentSections.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+            <div className="divider-gold mb-12" />
+            <div className="flex gap-12">
+              {/* Table of Contents — desktop sidebar */}
+              {tocItems.length >= 2 && (
+                <div className="hidden lg:block w-64 shrink-0">
+                  <TableOfContents items={tocItems} locale={locale} />
+                </div>
+              )}
+
+              <div className="flex-1 max-w-4xl">
+                {/* Table of Contents — mobile */}
+                {tocItems.length >= 2 && (
+                  <div className="lg:hidden">
+                    <TableOfContents items={tocItems} locale={locale} />
+                  </div>
+                )}
+
+                {contentSections.map((section, i) => (
+                  <div key={i}>
+                    {section.heading && (
+                      <h2
+                        id={section.headingId}
+                        className="font-playfair text-2xl md:text-3xl text-text-main mt-16 mb-6 first:mt-0 scroll-mt-24"
+                      >
+                        {section.heading}
+                      </h2>
+                    )}
+                    {renderParagraphs(section.content, isFounderSection(section))}
+                  </div>
+                ))}
+
+                {/* Share buttons at end of editorial */}
+                <div className="mt-12 pt-8 border-t border-border/20">
+                  <ShareButtons url={pageUrl} title={`${name} - Bestwine Online`} locale={locale} />
                 </div>
               </div>
-            </AnimatedSection>
+            </div>
           </div>
         </section>
       )}
@@ -425,6 +603,9 @@ export default async function CategoryPage({
           </div>
         </AnimatedSection>
       </section>
+
+      {/* ─── NEWSLETTER SIGNUP ─── */}
+      <NewsletterSignup locale={locale} />
 
       {/* ─── FAQ ─── */}
       <section className="border-t border-border/20">
@@ -454,6 +635,13 @@ export default async function CategoryPage({
           </AnimatedSection>
         </div>
       </section>
+
+      {/* ─── RELATED CATEGORIES ─── */}
+      <RelatedCategories
+        categories={relatedCategories}
+        currentSlug={category}
+        locale={locale}
+      />
 
       {/* Empty state */}
       {drinks.length === 0 && (
