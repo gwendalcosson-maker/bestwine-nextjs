@@ -54,6 +54,38 @@
     "empty": "Nessuna categoria disponibile al momento.",
     "explore_category": "Esplora"
   },
+  "home_editorial": {
+    "tagline": "La carta dei migliori vini e distillati dei ristoranti gastronomici stellati Michelin online",
+    "mission": "Scopri vini e distillati selezionati dagli chef e sommelier dei ristoranti gastronomici stellati Michelin.",
+    "value_proposition": "Solo i vini e distillati disponibili per l'acquisto online sono elencati, per permetterti di acquistarli facilmente.",
+    "creator": "Gwendal, appassionato di vini e distillati"
+  },
+  "editorial": {
+    "about_title": "A proposito di {category}",
+    "find_title": "Trova i migliori {category}",
+    "find_text": "Scopri {category} selezionati dagli chef e sommelier dei ristoranti gastronomici stellati Michelin. Una selezione di professionisti credibili e legittimi per aiutarti a trovare il tuo riferimento preferito.",
+    "buy_title": "Acquista i migliori {category}",
+    "buy_text": "Ti guidiamo verso le offerte commerciali e promozionali più interessanti online. Puoi acquistare i migliori {category} con fiducia grazie a un riferimento affidabile e imparziale.",
+    "methodology_text": "Bestwine Online referenzia i {category} presenti nelle carte dei vini e nelle cantine dei ristoranti gastronomici più conosciuti e riconosciuti nel mondo.",
+    "update_text": "Il riferimento dei migliori {category} viene aggiornato quotidianamente integrando nuovi riferimenti dalle carte dei vini dei ristoranti gastronomici.",
+    "why_choose_text": "Gli chef e sommelier dei ristoranti gastronomici sono i garanti dell'eccellenza gastronomica, offrendo i migliori prodotti, piatti e bevande nei loro ristoranti.",
+    "why_buy_text": "Bestwine Online si impegna a referenziare i migliori {category} e a guidarti verso le offerte commerciali online più attraenti affinché tu possa acquistarli al miglior prezzo.",
+    "personal_statement": "Sono un appassionato di vini e distillati e non mi definirei mai un esperto. Non mi posiziono assolutamente come consulente. Lascio questo ruolo all'expertise degli chef e sommelier gastronomici.",
+    "howto_title": "Come trovare e acquistare i migliori {category}",
+    "howto_step1": "Seleziona i tuoi criteri di preferenza",
+    "howto_step2": "Classifica i {category} secondo i tuoi criteri",
+    "howto_step3": "Seleziona il tuo riferimento",
+    "howto_step4": "Acquista online al miglior prezzo",
+    "faq_title": "Domande frequenti",
+    "faq_q1": "Come vengono selezionati i {category} su Bestwine Online?",
+    "faq_a1": "Bestwine Online referenzia i {category} presenti nelle carte dei vini e nelle cantine dei ristoranti gastronomici più rinomati al mondo. Ogni riferimento è stato identificato dal nostro team editoriale dalle carte ufficiali dei ristoranti stellati Michelin.",
+    "faq_q2": "Come viene aggiornato il riferimento dei migliori {category}?",
+    "faq_a2": "Il riferimento dei migliori {category} viene aggiornato quotidianamente con nuovi riferimenti dalle carte dei vini dei ristoranti gastronomici. Il nostro team monitora costantemente le nuove carte pubblicate dai ristoranti stellati Michelin.",
+    "faq_q3": "Perché scegliere un riferimento di {category} tramite Bestwine Online?",
+    "faq_a3": "Gli chef e sommelier dei ristoranti gastronomici sono i garanti dell'eccellenza gastronomica. Fidarsi della loro selezione significa affidarsi a decenni di esperienza e passione per l'eccellenza.",
+    "faq_q4": "Perché acquistare i tuoi {category} tramite Bestwine Online?",
+    "faq_a4": "Bestwine Online si impegna a referenziare i migliori {category} e a guidarti verso le offerte online più attraenti. Confrontiamo le offerte di numerosi commercianti per offrirti il miglior rapporto qualità-prezzo."
+  },
   "seo": {
     "site_name": "Bestwine",
     "separator": " — "

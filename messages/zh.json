@@ -54,6 +54,38 @@
     "empty": "暂无分类。",
     "explore_category": "浏览"
   },
+  "home_editorial": {
+    "tagline": "米其林星级美食餐厅最佳葡萄酒与烈酒在线酒单",
+    "mission": "探索由米其林星级美食餐厅的主厨和侍酒师精选的葡萄酒与烈酒。",
+    "value_proposition": "仅展示可在线购买的葡萄酒与烈酒，方便您轻松选购。",
+    "creator": "Gwendal，葡萄酒与烈酒爱好者"
+  },
+  "editorial": {
+    "about_title": "关于{category}",
+    "find_title": "寻找最佳{category}",
+    "find_text": "探索由米其林星级美食餐厅的主厨和侍酒师精选的{category}。来自可信赖的专业人士的精选，帮助您找到心仪的佳酿。",
+    "buy_title": "购买最佳{category}",
+    "buy_text": "我们为您导航至最具吸引力的在线商业和促销优惠。凭借可靠且公正的参考指南，您可以放心购买最好的{category}。",
+    "methodology_text": "Bestwine Online参考了全球最知名和最受认可的美食餐厅酒单和酒窖中的{category}。",
+    "update_text": "最佳{category}参考指南每日更新，整合来自美食餐厅酒单的新品牌。",
+    "why_choose_text": "美食餐厅的主厨和侍酒师是美食卓越品质的保证者，在其餐厅中提供最优质的产品、菜肴和饮品。",
+    "why_buy_text": "Bestwine Online致力于参考最好的{category}，并引导您找到最具吸引力的在线优惠，让您以最优价格购买。",
+    "personal_statement": "我是一位葡萄酒与烈酒爱好者，绝不会将自己定义为专家。我完全不以顾问自居。我将这一角色留给美食主厨和侍酒师的专业知识。",
+    "howto_title": "如何找到并购买最佳{category}",
+    "howto_step1": "选择您的偏好标准",
+    "howto_step2": "按您的标准对{category}进行排序",
+    "howto_step3": "选择您的参考品牌",
+    "howto_step4": "以最优价格在线购买",
+    "faq_title": "常见问题",
+    "faq_q1": "Bestwine Online如何选择{category}？",
+    "faq_a1": "Bestwine Online参考了全球最知名美食餐厅的酒单和酒窖中的{category}。每个品牌都由我们的编辑团队从米其林星级餐厅的官方酒单中甄选。",
+    "faq_q2": "最佳{category}参考指南如何更新？",
+    "faq_a2": "最佳{category}参考指南每日更新，收录来自美食餐厅酒单的新品牌。我们的团队持续监测米其林星级餐厅发布的新酒单。",
+    "faq_q3": "为什么通过Bestwine Online选择{category}？",
+    "faq_a3": "美食餐厅的主厨和侍酒师是美食卓越品质的保证者。信任他们的选择意味着依靠数十年的专业知识和对卓越的热情。",
+    "faq_q4": "为什么通过Bestwine Online购买{category}？",
+    "faq_a4": "Bestwine Online致力于参考最好的{category}，并引导您找到最具吸引力的在线优惠。我们比较众多商家的报价，为您提供最佳性价比。"
+  },
   "seo": {
     "site_name": "Bestwine",
     "separator": " — "

@@ -54,6 +54,38 @@
     "empty": "Noch keine Kategorien verfügbar.",
     "explore_category": "Erkunden"
   },
+  "home_editorial": {
+    "tagline": "Die Weinkarte der besten Weine und Spirituosen aus Michelin-Sterne-Gourmetrestaurants online",
+    "mission": "Entdecken Sie Weine und Spirituosen, ausgewählt von Köchen und Sommeliers der Michelin-Sterne-Gourmetrestaurants.",
+    "value_proposition": "Nur online erhältliche Weine und Spirituosen werden gelistet, damit Sie sie einfach kaufen können.",
+    "creator": "Gwendal, Wein- und Spirituosenliebhaber"
+  },
+  "editorial": {
+    "about_title": "Über {category}",
+    "find_title": "Finden Sie die besten {category}",
+    "find_text": "Entdecken Sie {category}, ausgewählt von den Köchen und Sommeliers der Michelin-Sterne-Gourmetrestaurants. Eine Auswahl von glaubwürdigen und anerkannten Fachleuten, um Ihnen zu helfen, Ihre bevorzugte Referenz zu finden.",
+    "buy_title": "Kaufen Sie die besten {category}",
+    "buy_text": "Wir führen Sie zu den attraktivsten kommerziellen und Werbeangeboten online. Sie können die besten {category} vertrauensvoll kaufen dank eines zuverlässigen und unparteiischen Referenzführers.",
+    "methodology_text": "Bestwine Online referenziert die {category}, die auf den Weinkarten und in den Kellern der renommiertesten Gourmetrestaurants weltweit zu finden sind.",
+    "update_text": "Der Referenzführer der besten {category} wird täglich mit neuen Referenzen aus den Weinkarten der Gourmetrestaurants aktualisiert.",
+    "why_choose_text": "Die Köche und Sommeliers der Gourmetrestaurants sind Garanten gastronomischer Exzellenz und bieten die besten Produkte, Speisen und Getränke in ihren Restaurants.",
+    "why_buy_text": "Bestwine Online verpflichtet sich, die besten {category} zu referenzieren und Sie zu den attraktivsten Online-Angeboten zu führen, damit Sie zum besten Preis kaufen können.",
+    "personal_statement": "Ich bin ein Wein- und Spirituosenliebhaber und würde mich nie als Experte bezeichnen. Ich positioniere mich keinesfalls als Berater. Das überlasse ich der Expertise der Gourmet-Köche und Sommeliers.",
+    "howto_title": "Wie Sie die besten {category} finden und kaufen",
+    "howto_step1": "Wählen Sie Ihre Präferenzkriterien",
+    "howto_step2": "Sortieren Sie die {category} nach Ihren Kriterien",
+    "howto_step3": "Wählen Sie Ihre Referenz",
+    "howto_step4": "Kaufen Sie online zum besten Preis",
+    "faq_title": "Häufig gestellte Fragen",
+    "faq_q1": "Wie werden die {category} auf Bestwine Online ausgewählt?",
+    "faq_a1": "Bestwine Online referenziert die {category} auf den Weinkarten und in den Kellern der renommiertesten Gourmetrestaurants weltweit. Jede Referenz wurde von unserem Redaktionsteam anhand der offiziellen Weinkarten der Michelin-Sterne-Restaurants identifiziert.",
+    "faq_q2": "Wie wird der Referenzführer der besten {category} aktualisiert?",
+    "faq_a2": "Der Referenzführer der besten {category} wird täglich mit neuen Referenzen aus den Weinkarten der Gourmetrestaurants aktualisiert. Unser Team überwacht ständig neue Weinkarten, die von Michelin-Sterne-Restaurants veröffentlicht werden.",
+    "faq_q3": "Warum eine {category}-Referenz über Bestwine Online wählen?",
+    "faq_a3": "Die Köche und Sommeliers der Gourmetrestaurants sind Garanten gastronomischer Exzellenz. Ihrer Auswahl zu vertrauen bedeutet, sich auf Jahrzehnte der Expertise und Leidenschaft für Exzellenz zu stützen.",
+    "faq_q4": "Warum Ihre {category} über Bestwine Online kaufen?",
+    "faq_a4": "Bestwine Online verpflichtet sich, die besten {category} zu referenzieren und Sie zu den attraktivsten Online-Angeboten zu führen. Wir vergleichen Angebote zahlreicher Händler, um Ihnen das beste Preis-Leistungs-Verhältnis zu bieten."
+  },
   "seo": {
     "site_name": "Bestwine",
     "separator": " — "

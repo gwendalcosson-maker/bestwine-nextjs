@@ -54,6 +54,38 @@
     "empty": "No categories available yet.",
     "explore_category": "Explore"
   },
+  "home_editorial": {
+    "tagline": "The wine list of the finest wines and spirits from Michelin-starred gourmet restaurants online",
+    "mission": "Discover wines and spirits selected by the chefs and sommeliers of Michelin-starred gourmet restaurants.",
+    "value_proposition": "Only wines and spirits available for purchase online are listed, making it easy for you to buy them.",
+    "creator": "Gwendal, wine and spirits enthusiast"
+  },
+  "editorial": {
+    "about_title": "About {category}",
+    "find_title": "Find the best {category}",
+    "find_text": "Discover {category} selected by the chefs and sommeliers of Michelin-starred gourmet restaurants. A selection by credible and legitimate professionals to help you find your preferred reference.",
+    "buy_title": "Buy the best {category}",
+    "buy_text": "We guide you to the most attractive commercial and promotional offers online. You can buy the best {category} with confidence through a reliable and impartial reference guide.",
+    "methodology_text": "Bestwine Online references the {category} found on the wine lists and in the cellars of the most renowned gourmet restaurants worldwide.",
+    "update_text": "The reference guide for the best {category} is updated daily with new references from the wine lists of gourmet restaurants.",
+    "why_choose_text": "The chefs and sommeliers of gourmet restaurants are the guarantors of gastronomic excellence, offering the finest products, dishes, and beverages in their restaurants.",
+    "why_buy_text": "Bestwine Online is committed to referencing the best {category} and guiding you to the most attractive online offers so you can buy them at the best price.",
+    "personal_statement": "I am a wine and spirits enthusiast and would never define myself as an expert. I do not position myself as an adviser. I leave that to the expertise of gourmet chefs and sommeliers.",
+    "howto_title": "How to find and buy the best {category}",
+    "howto_step1": "Select your preference criteria",
+    "howto_step2": "Sort {category} by your criteria",
+    "howto_step3": "Select your reference",
+    "howto_step4": "Buy online at the best price",
+    "faq_title": "Frequently Asked Questions",
+    "faq_q1": "How are {category} selected on Bestwine Online?",
+    "faq_a1": "Bestwine Online references the {category} found on the wine lists and in the cellars of the most renowned gourmet restaurants worldwide. Each reference has been identified by our editorial team from the official wine lists of Michelin-starred restaurants.",
+    "faq_q2": "How is the reference guide for the best {category} updated?",
+    "faq_a2": "The reference guide for the best {category} is updated daily with new references from gourmet restaurant wine lists. Our team constantly monitors new wine lists published by Michelin-starred restaurants.",
+    "faq_q3": "Why choose a {category} reference via Bestwine Online?",
+    "faq_a3": "The chefs and sommeliers of gourmet restaurants are the guarantors of gastronomic excellence, offering the finest products, dishes, and beverages in their restaurants. Trusting their selection means relying on decades of expertise and passion for excellence.",
+    "faq_q4": "Why buy your {category} via Bestwine Online?",
+    "faq_a4": "Bestwine Online is committed to referencing the best {category} and guiding you to the most attractive online offers so you can buy them at the best price. We compare offers from numerous merchants to bring you the best value."
+  },
   "seo": {
     "site_name": "Bestwine",
     "separator": " — "

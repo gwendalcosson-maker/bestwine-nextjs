@@ -54,6 +54,38 @@
     "empty": "Aucune catégorie disponible pour le moment.",
     "explore_category": "Explorer"
   },
+  "home_editorial": {
+    "tagline": "La carte des meilleurs vins et spiritueux des restaurants gastronomiques étoilés en ligne",
+    "mission": "Découvrez des vins et spiritueux sélectionnés par les chefs et sommeliers des restaurants gastronomiques étoilés.",
+    "value_proposition": "Seules les références de vins et spiritueux commercialisées en ligne vous sont proposées pour vous permettre de les acheter facilement.",
+    "creator": "Gwendal, amateur de vins et spiritueux"
+  },
+  "editorial": {
+    "about_title": "À propos des {category}",
+    "find_title": "Trouvez les meilleurs {category}",
+    "find_text": "Découvrez des {category} sélectionnés par les chefs et sommeliers des restaurants gastronomiques étoilés. Une sélection par des professionnels crédibles et légitimes pour vous permettre de trouver votre référence préférée.",
+    "buy_title": "Achetez les meilleurs {category}",
+    "buy_text": "Nous vous guidons vers les offres commerciales et promotionnelles les plus intéressantes en ligne. Vous pouvez acheter les meilleurs {category} en toute confiance grâce à un référentiel fiable et impartial.",
+    "methodology_text": "Bestwine Online référence les {category} présents sur la carte des vins et dans les caves des restaurants gastronomiques les plus connus et reconnus à travers le monde.",
+    "update_text": "Le référentiel des meilleurs {category} est mis à jour quotidiennement en intégrant de nouvelles références qui proviennent des cartes des vins des restaurants gastronomiques.",
+    "why_choose_text": "Les chefs et sommeliers des restaurants gastronomiques sont les garants de l'excellence de la gastronomie en proposant les meilleurs produits, mets et boissons dans leurs restaurants.",
+    "why_buy_text": "Bestwine Online s'engage à référencer les meilleurs {category} et à vous guider vers les offres commerciales en ligne les plus attractives pour que vous puissiez les acheter au meilleur prix.",
+    "personal_statement": "Je suis un amateur de vins et spiritueux et je ne me définirais jamais comme un expert. Je ne me positionne aucunement comme conseiller. Je laisse la place pour cela à l'expertise des chefs et sommeliers gastronomiques.",
+    "howto_title": "Comment trouver et acheter les meilleurs {category}",
+    "howto_step1": "Sélectionnez vos critères de préférence",
+    "howto_step2": "Classez les {category} selon vos critères",
+    "howto_step3": "Sélectionnez votre référence",
+    "howto_step4": "Achetez en ligne au meilleur prix",
+    "faq_title": "Questions fréquentes",
+    "faq_q1": "Comment sont sélectionnés les {category} sur Bestwine Online ?",
+    "faq_a1": "Bestwine Online référence les {category} présents sur la carte des vins et dans les caves des restaurants gastronomiques les plus connus et reconnus à travers le monde. Chaque référence a été identifiée par notre équipe éditoriale à partir des cartes officielles des restaurants étoilés Michelin.",
+    "faq_q2": "Comment est mis à jour le référentiel des meilleurs {category} ?",
+    "faq_a2": "Le référentiel des meilleurs {category} est mis à jour quotidiennement en intégrant de nouvelles références qui proviennent des cartes des vins des restaurants gastronomiques. Notre équipe veille en permanence les nouvelles cartes publiées par les restaurants étoilés.",
+    "faq_q3": "Pourquoi choisir une référence de {category} via Bestwine Online ?",
+    "faq_a3": "Les chefs et sommeliers des restaurants gastronomiques sont les garants de l'excellence de la gastronomie en proposant les meilleurs produits, mets et boissons dans leurs restaurants. Faire confiance à leur sélection, c'est s'appuyer sur des décennies d'expertise et de passion pour l'excellence.",
+    "faq_q4": "Pourquoi acheter votre {category} via Bestwine Online ?",
+    "faq_a4": "Bestwine Online s'engage à référencer les meilleurs {category} et à vous guider vers les offres commerciales en ligne les plus attractives pour que vous puissiez les acheter au meilleur prix. Nous comparons les offres de nombreux marchands pour vous proposer le meilleur rapport qualité-prix."
+  },
   "seo": {
     "site_name": "Bestwine",
     "separator": " — "

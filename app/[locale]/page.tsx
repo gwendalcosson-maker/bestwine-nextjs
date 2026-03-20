@@ -50,6 +50,7 @@ const CATEGORY_NAMES: Record<string, Record<string, string>> = {
 
 export default function HomePage() {
   const t = useTranslations('home')
+  const tEditorial = useTranslations('home_editorial')
   const tNav = useTranslations('nav')
   const locale = useLocale()
   const isFr = locale === 'fr'
@@ -117,6 +118,29 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* ─── EDITORIAL VALUE PROPOSITION ─── */}
+      <section className="border-t border-border/30 bg-fog/20">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-20">
+          <AnimatedSection animation="fadeUp">
+            <p className="text-center text-lg lg:text-xl font-playfair text-text-main leading-relaxed italic mb-6">
+              {tEditorial('tagline')}
+            </p>
+            <div className="divider-gold" />
+            <div className="mt-8 space-y-4">
+              <p className="text-base font-inter text-text-main/70 leading-[1.9] text-center">
+                {tEditorial('mission')}
+              </p>
+              <p className="text-base font-inter text-text-main/70 leading-[1.9] text-center">
+                {tEditorial('value_proposition')}
+              </p>
+            </div>
+            <p className="mt-6 text-sm font-inter text-gold/60 text-center tracking-wide">
+              {tEditorial('creator')}
+            </p>
           </AnimatedSection>
         </div>
       </section>

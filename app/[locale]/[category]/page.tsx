@@ -74,16 +74,17 @@ export default async function CategoryPage({
 }) {
   const { locale, category } = await params
   const isRtl = isRtlLocale(locale)
-  const isFr = locale === 'fr'
 
   const cat = await getCategoryBySlug(category, locale)
   if (!cat) notFound()
 
   const translation = cat.category_translations[0]
   const name = translation?.name ?? category
+  const nameLower = name.toLowerCase()
 
   const drinks = await getDrinksByCategory(cat.id, locale)
   const tNav = await getTranslations({ locale, namespace: 'nav' })
+  const tEditorial = await getTranslations({ locale, namespace: 'editorial' })
 
   // Split featured (first 6) and rest
   const featuredDrinks = drinks.slice(0, 6)
@@ -94,29 +95,59 @@ export default async function CategoryPage({
     { label: name },
   ]
 
-  // Generate FAQ schema if we have description
-  const faqSchema = translation?.description ? {
+  // Parse editorial description into paragraphs
+  const descriptionParagraphs = translation?.description
+    ? translation.description.split('\n\n').filter((p: string) => p.trim())
+    : []
+
+  // Build FAQ data from translation messages
+  const faqItems = [
+    { q: tEditorial('faq_q1', { category: nameLower }), a: tEditorial('faq_a1', { category: nameLower }) },
+    { q: tEditorial('faq_q2', { category: nameLower }), a: tEditorial('faq_a2', { category: nameLower }) },
+    { q: tEditorial('faq_q3', { category: nameLower }), a: tEditorial('faq_a3', { category: nameLower }) },
+    { q: tEditorial('faq_q4', { category: nameLower }), a: tEditorial('faq_a4', { category: nameLower }) },
+  ]
+
+  // HowTo steps
+  const howtoSteps = [
+    tEditorial('howto_step1'),
+    tEditorial('howto_step2', { category: nameLower }),
+    tEditorial('howto_step3'),
+    tEditorial('howto_step4'),
+  ]
+
+  // Generate FAQ schema
+  const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: isFr
-          ? `Quels sont les meilleurs ${name.toLowerCase()} des restaurants etoiles ?`
-          : `What are the best ${name.toLowerCase()} from starred restaurants?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: translation.description,
-        },
+    mainEntity: faqItems.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
       },
-    ],
-  } : null
+    })),
+  }
+
+  // Generate HowTo schema
+  const howToSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: tEditorial('howto_title', { category: nameLower }),
+    step: howtoSteps.map((step, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      text: step,
+    })),
+  }
 
   return (
     <div className="grain-overlay min-h-screen">
       <JsonLd data={generateBreadcrumbSchema(breadcrumbItems, locale)} />
       <JsonLd data={generateItemListSchema(drinks, locale, cat)} />
-      {faqSchema && <JsonLd data={faqSchema} />}
+      <JsonLd data={faqSchema} />
+      <JsonLd data={howToSchema} />
 
       {/* ─── HERO BANNER ─── */}
       <section className="relative bg-gradient-hero py-20 lg:py-28">
@@ -133,16 +164,16 @@ export default async function CategoryPage({
                 {name}
               </h1>
 
-              {translation?.description && (
+              {descriptionParagraphs.length > 0 && (
                 <p className="mt-6 text-lg text-muted/80 leading-relaxed font-inter font-light max-w-2xl">
-                  {translation.description}
+                  {descriptionParagraphs[0]}
                 </p>
               )}
 
               <div className="mt-6 flex items-center gap-4">
                 <div className="divider-gold !mx-0 !w-12" />
                 <p className="text-sm text-gold/70 font-inter tracking-wide">
-                  {drinks.length} {isFr ? 'reference' : 'reference'}{drinks.length > 1 ? 's' : ''}
+                  {drinks.length} reference{drinks.length > 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -156,7 +187,7 @@ export default async function CategoryPage({
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-6">
               <h2 className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
-                {isFr ? 'Sous-categories' : 'Subcategories'}
+                {tEditorial('about_title', { category: '' }).includes('propos') ? 'Sous-categories' : 'Subcategories'}
               </h2>
               <div className="flex-1 h-px bg-border/20" />
             </div>
@@ -179,20 +210,44 @@ export default async function CategoryPage({
         </section>
       )}
 
+      {/* ─── EDITORIAL: FIND & BUY ─── */}
+      <section className="border-t border-border/20 bg-fog/20">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
+          <AnimatedSection animation="fadeUp">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div>
+                <h2 className="font-playfair text-2xl font-bold text-text-main mb-4">
+                  {tEditorial('find_title', { category: nameLower })}
+                </h2>
+                <p className="text-base font-inter text-text-main/70 leading-[1.9]">
+                  {tEditorial('find_text', { category: nameLower })}
+                </p>
+              </div>
+              <div>
+                <h2 className="font-playfair text-2xl font-bold text-text-main mb-4">
+                  {tEditorial('buy_title', { category: nameLower })}
+                </h2>
+                <p className="text-base font-inter text-text-main/70 leading-[1.9]">
+                  {tEditorial('buy_text', { category: nameLower })}
+                </p>
+              </div>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
       {/* ─── FEATURED REFERENCES ─── Star products */}
       {featuredDrinks.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
-                {isFr ? 'Selection' : 'Selection'}
+                Selection
               </span>
               <div className="divider-gold !mx-0 !w-12" />
             </div>
             <h2 className="text-2xl lg:text-3xl font-playfair font-bold text-text-main tracking-tight mb-10">
-              {isFr
-                ? `Les meilleurs ${name.toLowerCase()}`
-                : `The finest ${name.toLowerCase()}`}
+              {tEditorial('find_title', { category: nameLower })}
             </h2>
           </AnimatedSection>
 
@@ -213,13 +268,40 @@ export default async function CategoryPage({
         </section>
       )}
 
+      {/* ─── HOW TO ─── 4 steps */}
+      <section className="bg-obsidian-gradient grain-overlay relative py-16 lg:py-24">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-b from-gold/30 to-transparent" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-t from-gold/30 to-transparent" />
+        </div>
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12">
+          <AnimatedSection animation="fadeUp">
+            <h2 className="text-2xl lg:text-3xl font-playfair font-bold text-white tracking-tight mb-12 text-center">
+              {tEditorial('howto_title', { category: nameLower })}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              {howtoSteps.map((step, i) => (
+                <div key={i} className="flex items-start gap-4">
+                  <span className="shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center font-playfair font-bold text-gold text-lg">
+                    {i + 1}
+                  </span>
+                  <p className="font-inter text-white/80 text-sm leading-relaxed pt-2">
+                    {step}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
       {/* ─── COMPLETE TABLE ─── Full reference list */}
       {allDrinks.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
-                {isFr ? 'Toutes les references' : 'All References'}
+                {locale === 'fr' ? 'Toutes les references' : 'All References'}
               </span>
               <div className="flex-1 h-px bg-border/20" />
             </div>
@@ -232,16 +314,16 @@ export default async function CategoryPage({
                 <thead>
                   <tr className="bg-fog/40 border-b border-border/20">
                     <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {isFr ? 'Nom' : 'Name'}
+                      {locale === 'fr' ? 'Nom' : 'Name'}
                     </th>
                     <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {isFr ? 'Producteur' : 'Producer'}
+                      {locale === 'fr' ? 'Producteur' : 'Producer'}
                     </th>
                     <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {isFr ? 'Origine' : 'Origin'}
+                      {locale === 'fr' ? 'Origine' : 'Origin'}
                     </th>
                     <th className="text-start px-6 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {isFr ? 'Millesime' : 'Vintage'}
+                      {locale === 'fr' ? 'Millesime' : 'Vintage'}
                     </th>
                     <th className="px-6 py-4"></th>
                   </tr>
@@ -257,13 +339,13 @@ export default async function CategoryPage({
                         {drink.name}
                       </td>
                       <td className="px-6 py-4 font-inter text-muted">
-                        {drink.producer ?? '—'}
+                        {drink.producer ?? '\u2014'}
                       </td>
                       <td className="px-6 py-4 font-inter text-muted">
-                        {[drink.region, drink.country].filter(Boolean).join(', ') || '—'}
+                        {[drink.region, drink.country].filter(Boolean).join(', ') || '\u2014'}
                       </td>
                       <td className="px-6 py-4 font-playfair text-gold">
-                        {drink.vintage ?? '—'}
+                        {drink.vintage ?? '\u2014'}
                       </td>
                       <td className="px-6 py-4 text-end">
                         <a
@@ -273,7 +355,7 @@ export default async function CategoryPage({
                           className="text-xs font-inter font-medium text-primary/70 hover:text-primary
                                    link-underline transition-colors duration-fast uppercase tracking-wide"
                         >
-                          {isFr ? 'Trouver & Acheter' : 'Find & Buy'}
+                          {locale === 'fr' ? 'Trouver & Acheter' : 'Find & Buy'}
                         </a>
                       </td>
                     </tr>
@@ -301,66 +383,76 @@ export default async function CategoryPage({
         </section>
       )}
 
-      {/* ─── EDITORIAL CONTENT ─── */}
-      {translation?.description && (
+      {/* ─── EDITORIAL CONTENT ─── Full description from DB */}
+      {descriptionParagraphs.length > 1 && (
         <section className="border-t border-border/20 bg-fog/20">
           <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
             <AnimatedSection animation="fadeUp">
               <div className="section-editorial">
                 <h2 className="text-2xl font-playfair font-bold text-text-main mb-8">
-                  {isFr ? `A propos des ${name.toLowerCase()}` : `About ${name.toLowerCase()}`}
+                  {tEditorial('about_title', { category: nameLower })}
                 </h2>
-                <p className="text-base font-inter text-text-main/70 leading-[1.9]">
-                  {translation.description}
-                </p>
+                <div className="space-y-6">
+                  {descriptionParagraphs.slice(1).map((paragraph: string, i: number) => (
+                    <p key={i} className="text-base font-inter text-text-main/80 leading-[1.9]">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
               </div>
             </AnimatedSection>
           </div>
         </section>
       )}
 
-      {/* ─── FAQ ─── */}
-      <section className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
+      {/* ─── METHODOLOGY ─── */}
+      <section className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-16">
         <AnimatedSection animation="fadeUp">
-          <h2 className="text-2xl font-playfair font-bold text-text-main mb-10">
-            {isFr ? 'Questions frequentes' : 'Frequently Asked Questions'}
-          </h2>
-          <div className="space-y-0 divide-y divide-border/20">
-            {[
-              {
-                q: isFr
-                  ? `Quels sont les meilleurs ${name.toLowerCase()} des restaurants etoiles ?`
-                  : `What are the best ${name.toLowerCase()} from starred restaurants?`,
-                a: isFr
-                  ? `Notre selection reunit les ${name.toLowerCase()} les plus presents sur les cartes des vins des restaurants etoiles Michelin. Chaque reference a ete identifiee par notre equipe editoriale.`
-                  : `Our selection brings together the ${name.toLowerCase()} most frequently featured on Michelin-starred restaurant wine lists. Each reference has been identified by our editorial team.`,
-              },
-              {
-                q: isFr
-                  ? `Comment acheter ces ${name.toLowerCase()} ?`
-                  : `How can I purchase these ${name.toLowerCase()}?`,
-                a: isFr
-                  ? `Chaque reference dispose d'un lien "Trouver & Acheter" qui vous redirige vers les meilleures offres disponibles en ligne.`
-                  : `Each reference includes a "Find & Buy" link that redirects you to the best available offers online.`,
-              },
-            ].map((faq, i) => (
-              <details key={i} className="group py-6">
-                <summary className="flex items-center justify-between cursor-pointer list-none">
-                  <span className="font-inter font-medium text-text-main text-[15px] pe-4">
-                    {faq.q}
-                  </span>
-                  <span className="shrink-0 text-gold text-lg font-light
-                                 group-open:rotate-45 transition-transform duration-normal">
-                    +
-                  </span>
-                </summary>
-                <p className="mt-4 text-sm font-inter text-muted leading-relaxed max-w-2xl">
-                  {faq.a}
-                </p>
-              </details>
-            ))}
+          <div className="space-y-6">
+            <p className="text-base font-inter text-text-main/70 leading-[1.9]">
+              {tEditorial('methodology_text', { category: nameLower })}
+            </p>
+            <p className="text-base font-inter text-text-main/70 leading-[1.9]">
+              {tEditorial('update_text', { category: nameLower })}
+            </p>
+            <p className="text-base font-inter text-text-main/70 leading-[1.9]">
+              {tEditorial('why_choose_text')}
+            </p>
+            <div className="shimmer-line h-px w-16 mx-auto !my-8" />
+            <p className="text-sm font-inter text-text-main/50 leading-[1.9] italic text-center max-w-xl mx-auto">
+              {tEditorial('personal_statement')}
+            </p>
           </div>
         </AnimatedSection>
+      </section>
+
+      {/* ─── FAQ ─── */}
+      <section className="border-t border-border/20">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
+          <AnimatedSection animation="fadeUp">
+            <h2 className="text-2xl font-playfair font-bold text-text-main mb-10">
+              {tEditorial('faq_title')}
+            </h2>
+            <div className="space-y-0 divide-y divide-border/20">
+              {faqItems.map((faq, i) => (
+                <details key={i} className="group py-6">
+                  <summary className="flex items-center justify-between cursor-pointer list-none">
+                    <span className="font-inter font-medium text-text-main text-[15px] pe-4">
+                      {faq.q}
+                    </span>
+                    <span className="shrink-0 text-gold text-lg font-light
+                                   group-open:rotate-45 transition-transform duration-normal">
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-4 text-sm font-inter text-muted leading-relaxed max-w-2xl">
+                    {faq.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </AnimatedSection>
+        </div>
       </section>
 
       {/* Empty state */}
@@ -369,7 +461,7 @@ export default async function CategoryPage({
           <AnimatedSection animation="fadeUp">
             <div className="text-center py-20 glass-card rounded-xl">
               <p className="text-muted font-inter">
-                {isFr ? 'Aucune reference disponible pour le moment.' : 'No references available yet.'}
+                {locale === 'fr' ? 'Aucune reference disponible pour le moment.' : 'No references available yet.'}
               </p>
             </div>
           </AnimatedSection>
