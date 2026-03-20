@@ -512,98 +512,81 @@ export default async function CategoryPage({
             <div className="divider-gold mb-8" />
           </AnimatedSection>
 
-          <AnimatedSection animation="fadeUp">
-            {/* Reference table — always visible, scrollable on mobile */}
-            <div className="overflow-x-auto rounded-xl border border-border/20">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead>
-                  <tr className="bg-fog/40 border-b border-border/20">
-                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {tCategory('table_brand')}
-                    </th>
-                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {tCategory('table_origin')}
-                    </th>
-                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {tCategory('table_vintage')}
-                    </th>
-                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {tCategory('table_type')}
-                    </th>
-                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {tCategory('table_restaurants')}
-                    </th>
-                    <th className="text-start px-5 py-4 font-inter font-medium text-muted/70 text-[11px] uppercase tracking-[0.2em]">
-                      {tCategory('table_price')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allDrinks.map((drink, i) => {
-                    const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
-                    const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
-
-                    return (
-                      <tr
-                        key={drink.id}
-                        className={`border-b border-border/10 transition-colors duration-fast hover:bg-champagne/20
-                                  ${i % 2 === 0 ? 'bg-white/40' : 'bg-fog/10'}`}
-                      >
-                        <td className="px-5 py-4 font-playfair font-semibold text-text-main">
-                          {drink.name}
-                        </td>
-                        <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
-                          {drink.country ?? '—'}
-                          {drink.region ? ` – ${drink.region}` : ''}
-                        </td>
-                        <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
-                          {drink.vintage ? `${drink.vintage}` : '—'}
-                        </td>
-                        <td className="px-5 py-4 font-inter text-text-main/70 text-sm">
-                          {drink.appellation ?? '—'}
-                        </td>
-                        <td className="px-5 py-4">
-                          {restaurants.length > 0 ? (
-                            <div className="space-y-1">
-                              {restaurants.map((rest, j) => (
-                                <div key={j} className="text-sm">
-                                  <span className="text-gold">
-                                    {'★'.repeat(rest.michelin_stars)}
-                                  </span>
-                                  {' – '}
-                                  <Link
-                                    href={`/${locale}/restaurants/${rest.slug}`}
-                                    className="text-secondary hover:text-primary link-underline"
-                                  >
-                                    {rest.name}
-                                  </Link>
-                                  {rest.country ? ` – ${rest.country}` : ''}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted text-sm">—</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4">
-                          <a
-                            href={googleShoppingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-inter font-medium text-secondary hover:text-primary
-                                     link-underline transition-colors duration-fast"
-                          >
-                            {tCategory('table_see_price')}
-                          </a>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+          {/* Reference grid — CSS Grid with inline styles for bulletproof rendering */}
+          <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #E5DDD5' }}>
+            {/* Header row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 2.5fr 1fr', minWidth: '900px', backgroundColor: '#F0EBE3', borderBottom: '1px solid #E5DDD5' }}>
+              {[tCategory('table_brand'), tCategory('table_origin'), tCategory('table_vintage'), tCategory('table_type'), tCategory('table_restaurants'), tCategory('table_price')].map((header, idx) => (
+                <div key={idx} style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888888' }}>
+                  {header}
+                </div>
+              ))}
             </div>
+            {/* Data rows */}
+            {allDrinks.map((drink, i) => {
+              const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
+              const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
 
-          </AnimatedSection>
+              return (
+                <div
+                  key={drink.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 2.5fr 1fr',
+                    minWidth: '900px',
+                    borderBottom: '1px solid rgba(229,221,213,0.3)',
+                    backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#FAFAF7',
+                  }}
+                >
+                  <div style={{ padding: '14px 18px', fontWeight: 600, color: '#2C1810' }}>
+                    {drink.name}
+                  </div>
+                  <div style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>
+                    {drink.country ?? '—'}{drink.region ? ` – ${drink.region}` : ''}
+                  </div>
+                  <div style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>
+                    {drink.vintage ? `${drink.vintage}` : '—'}
+                  </div>
+                  <div style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>
+                    {drink.appellation ?? '—'}
+                  </div>
+                  <div style={{ padding: '14px 18px' }}>
+                    {restaurants.length > 0 ? (
+                      <div>
+                        {restaurants.map((rest, j) => (
+                          <div key={j} style={{ fontSize: '13px', marginBottom: '4px' }}>
+                            <span style={{ color: '#C9A96E' }}>
+                              {'★'.repeat(rest.michelin_stars)}
+                            </span>
+                            {' – '}
+                            <Link
+                              href={`/${locale}/restaurants/${rest.slug}`}
+                              style={{ color: '#C97D4E', textDecoration: 'none' }}
+                            >
+                              Restaurant {rest.name}
+                            </Link>
+                            {rest.country ? ` – ${rest.country}` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ color: '#888', fontSize: '13px' }}>—</span>
+                    )}
+                  </div>
+                  <div style={{ padding: '14px 18px' }}>
+                    <a
+                      href={googleShoppingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#C97D4E', fontSize: '12px', textDecoration: 'underline' }}
+                    >
+                      {tCategory('table_see_price')}
+                    </a>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </section>
       )}
 
