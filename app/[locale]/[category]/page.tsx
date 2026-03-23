@@ -512,80 +512,68 @@ export default async function CategoryPage({
             <div className="divider-gold mb-8" />
           </AnimatedSection>
 
-          {/* Reference grid — CSS Grid with inline styles for bulletproof rendering */}
+          {/* Reference table — pure HTML table with inline styles (NOT inside AnimatedSection/motion) */}
           <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #E5DDD5' }}>
-            {/* Header row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 2.5fr 1fr', minWidth: '900px', backgroundColor: '#F0EBE3', borderBottom: '1px solid #E5DDD5' }}>
-              {[tCategory('table_brand'), tCategory('table_origin'), tCategory('table_vintage'), tCategory('table_type'), tCategory('table_restaurants'), tCategory('table_price')].map((header, idx) => (
-                <div key={idx} style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888888' }}>
-                  {header}
-                </div>
-              ))}
-            </div>
-            {/* Data rows */}
-            {allDrinks.map((drink, i) => {
-              const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
-              const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#F0EBE3' }}>
+                  <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', textAlign: 'left', borderBottom: '1px solid #E5DDD5' }}>{tCategory('table_brand')}</th>
+                  <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', textAlign: 'left', borderBottom: '1px solid #E5DDD5' }}>{tCategory('table_origin')}</th>
+                  <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', textAlign: 'left', borderBottom: '1px solid #E5DDD5' }}>{tCategory('table_vintage')}</th>
+                  <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', textAlign: 'left', borderBottom: '1px solid #E5DDD5' }}>{tCategory('table_type')}</th>
+                  <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', textAlign: 'left', borderBottom: '1px solid #E5DDD5' }}>{tCategory('table_restaurants')}</th>
+                  <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#888', textAlign: 'left', borderBottom: '1px solid #E5DDD5' }}>{tCategory('table_price')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allDrinks.map((drink, i) => {
+                  const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
+                  const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
 
-              return (
-                <div
-                  key={drink.id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 2.5fr 1fr',
-                    minWidth: '900px',
-                    borderBottom: '1px solid rgba(229,221,213,0.3)',
-                    backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#FAFAF7',
-                  }}
-                >
-                  <div style={{ padding: '14px 18px', fontWeight: 600, color: '#2C1810' }}>
-                    {drink.name}
-                  </div>
-                  <div style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>
-                    {drink.country ?? '—'}{drink.region ? ` – ${drink.region}` : ''}
-                  </div>
-                  <div style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>
-                    {drink.vintage ? `${drink.vintage}` : '—'}
-                  </div>
-                  <div style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>
-                    {drink.appellation ?? '—'}
-                  </div>
-                  <div style={{ padding: '14px 18px' }}>
-                    {restaurants.length > 0 ? (
-                      <div>
-                        {restaurants.map((rest, j) => (
-                          <div key={j} style={{ fontSize: '13px', marginBottom: '4px' }}>
-                            <span style={{ color: '#C9A96E' }}>
-                              {'★'.repeat(rest.michelin_stars)}
-                            </span>
-                            {' – '}
-                            <Link
-                              href={`/${locale}/restaurants/${rest.slug}`}
-                              style={{ color: '#C97D4E', textDecoration: 'none' }}
-                            >
-                              Restaurant {rest.name}
-                            </Link>
-                            {rest.country ? ` – ${rest.country}` : ''}
+                  return (
+                    <tr key={drink.id} style={{ backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#FAFAF7', borderBottom: '1px solid rgba(229,221,213,0.3)' }}>
+                      <td style={{ padding: '14px 18px', fontWeight: 600, color: '#2C1810' }}>{drink.name}</td>
+                      <td style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>{drink.country ?? '—'}{drink.region ? ` – ${drink.region}` : ''}</td>
+                      <td style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>{drink.vintage ? `${drink.vintage}` : '—'}</td>
+                      <td style={{ padding: '14px 18px', fontSize: '13px', color: 'rgba(44,24,16,0.6)' }}>{drink.appellation ?? '—'}</td>
+                      <td style={{ padding: '14px 18px' }}>
+                        {restaurants.length > 0 ? (
+                          <div>
+                            {restaurants.map((rest, j) => (
+                              <div key={j} style={{ fontSize: '13px', marginBottom: '4px' }}>
+                                <span style={{ color: '#C9A96E' }}>
+                                  {'★'.repeat(rest.michelin_stars)}
+                                </span>
+                                {' – '}
+                                <Link
+                                  href={`/${locale}/restaurants/${rest.slug}`}
+                                  style={{ color: '#C97D4E', textDecoration: 'none' }}
+                                >
+                                  Restaurant {rest.name}
+                                </Link>
+                                {rest.country ? ` – ${rest.country}` : ''}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span style={{ color: '#888', fontSize: '13px' }}>—</span>
-                    )}
-                  </div>
-                  <div style={{ padding: '14px 18px' }}>
-                    <a
-                      href={googleShoppingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: '#C97D4E', fontSize: '12px', textDecoration: 'underline' }}
-                    >
-                      {tCategory('table_see_price')}
-                    </a>
-                  </div>
-                </div>
-              )
-            })}
+                        ) : (
+                          <span style={{ color: '#888', fontSize: '13px' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 18px' }}>
+                        <a
+                          href={googleShoppingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#C97D4E', fontSize: '12px', textDecoration: 'underline' }}
+                        >
+                          {tCategory('table_see_price')}
+                        </a>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
