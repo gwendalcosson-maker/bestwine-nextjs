@@ -6,7 +6,7 @@ import { getCategories, getCategoryBySlug, getDrinksWithRestaurants } from '@/li
 import type { DrinkWithRestaurants } from '@/lib/queries'
 import { generateAlternateLinks, generateCanonicalUrl } from '@/lib/seo'
 import { generateItemListSchema, generateBreadcrumbSchema } from '@/lib/schema'
-import AnimatedSection from '@/components/AnimatedSection'
+// AnimatedSection removed
 // DrinkCard no longer used — replaced by reference table
 import Breadcrumb from '@/components/Breadcrumb'
 import JsonLd from '@/components/JsonLd'
@@ -315,7 +315,7 @@ export default async function CategoryPage({
         <div className="relative max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <Breadcrumb items={breadcrumbItems} isRtl={isRtl} />
 
-          <AnimatedSection animation="fadeUp">
+          <div>
             <div className="max-w-3xl">
               <h1 className="font-playfair font-bold text-4xl lg:text-5xl xl:text-6xl text-text-main leading-[1.05] tracking-tight">
                 {name}
@@ -334,24 +334,24 @@ export default async function CategoryPage({
                 </p>
               </div>
             </div>
-          </AnimatedSection>
+          </div>
         </div>
       </section>
 
       {/* ─── SUBCATEGORIES ─── */}
       {cat.children && cat.children.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-16">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <div className="flex items-center gap-3 mb-6">
               <h2 className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
                 {locale === 'fr' ? 'Sous-catégories' : 'Subcategories'}
               </h2>
               <div className="flex-1 h-px bg-border/20" />
             </div>
-          </AnimatedSection>
-          <AnimatedSection animation="stagger" className="flex flex-wrap gap-3">
+          </div>
+          <div>
             {cat.children.map((child) => (
-              <AnimatedSection key={child.slug} animation="scaleIn">
+              <div>
                 <Link
                   href={`/${locale}/${category}/${child.slug}`}
                   className="inline-block px-6 py-2.5 rounded-full font-inter text-sm
@@ -361,16 +361,16 @@ export default async function CategoryPage({
                 >
                   {child.category_translations[0]?.name ?? child.slug}
                 </Link>
-              </AnimatedSection>
+              </div>
             ))}
-          </AnimatedSection>
+          </div>
         </section>
       )}
 
       {/* ─── EDITORIAL: FIND & BUY ─── */}
       <section className="border-t border-border/20 bg-fog/20">
         <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               <div>
                 <h2 className="font-playfair text-2xl font-bold text-text-main mb-4">
@@ -389,14 +389,14 @@ export default async function CategoryPage({
                 </p>
               </div>
             </div>
-          </AnimatedSection>
+          </div>
         </div>
       </section>
 
       {/* ─── FEATURED REFERENCES ─── Top 3 by restaurant endorsements */}
       {featuredDrinks.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
                 {tCategory('selection')}
@@ -406,9 +406,9 @@ export default async function CategoryPage({
             <h2 className="text-2xl lg:text-3xl font-playfair font-bold text-text-main tracking-tight mb-10">
               {tEditorial('find_title', { category: nameLower })}
             </h2>
-          </AnimatedSection>
+          </div>
 
-          <AnimatedSection animation="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+          <div>
             {featuredDrinks.map((drink, rank) => {
               const restaurants = drink.wine_list_entries?.map(wle => wle.restaurants).filter(Boolean) ?? []
               const googleShoppingUrl = `https://www.google.com/search?q=${encodeURIComponent(drink.name + (drink.vintage ? ' ' + drink.vintage : '') + (locale === 'fr' ? ' acheter' : ' buy')).replace(/%20/g, '+')}&tbm=shop`
@@ -465,7 +465,7 @@ export default async function CategoryPage({
                 </div>
               )
             })}
-          </AnimatedSection>
+          </div>
         </section>
       )}
 
@@ -476,7 +476,7 @@ export default async function CategoryPage({
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-t from-gold/30 to-transparent" />
         </div>
         <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <h2 className="text-2xl lg:text-3xl font-playfair font-bold text-white tracking-tight mb-12 text-center">
               {tEditorial('howto_title', { category: nameLower })}
             </h2>
@@ -492,14 +492,14 @@ export default async function CategoryPage({
                 </div>
               ))}
             </div>
-          </AnimatedSection>
+          </div>
         </div>
       </section>
 
       {/* ─── REFERENCE TABLE ─── Core of bestwine: sorted by restaurant endorsement count */}
       {allDrinks.length > 0 && (
         <section id="references" className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-20">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <div className="flex items-center gap-3 mb-10">
               <span className="text-[11px] font-inter uppercase tracking-[0.35em] text-gold/70">
                 {tCategory('all_references')}
@@ -510,7 +510,7 @@ export default async function CategoryPage({
               {tCategory('drinks_count', { count: allDrinks.length })}
             </h2>
             <div className="divider-gold mb-8" />
-          </AnimatedSection>
+          </div>
 
           {/* Reference table — pure HTML table with inline styles (NOT inside AnimatedSection/motion) */}
           <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #E5DDD5' }}>
@@ -625,7 +625,7 @@ export default async function CategoryPage({
 
       {/* ─── METHODOLOGY ─── */}
       <section className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-12 lg:py-16">
-        <AnimatedSection animation="fadeUp">
+        <div>
           <div className="space-y-6">
             <p className="text-base font-inter text-text-main/70 leading-[1.9]">
               {tEditorial('methodology_text', { category: nameLower })}
@@ -641,7 +641,7 @@ export default async function CategoryPage({
               {tEditorial('personal_statement')}
             </p>
           </div>
-        </AnimatedSection>
+        </div>
       </section>
 
       {/* ─── NEWSLETTER SIGNUP ─── */}
@@ -650,7 +650,7 @@ export default async function CategoryPage({
       {/* ─── FAQ ─── */}
       <section className="border-t border-border/20">
         <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-24">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <h2 className="text-2xl font-playfair font-bold text-text-main mb-10">
               {tEditorial('faq_title')}
             </h2>
@@ -672,7 +672,7 @@ export default async function CategoryPage({
                 </details>
               ))}
             </div>
-          </AnimatedSection>
+          </div>
         </div>
       </section>
 
@@ -686,13 +686,13 @@ export default async function CategoryPage({
       {/* Empty state */}
       {drinks.length === 0 && (
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-20">
-          <AnimatedSection animation="fadeUp">
+          <div>
             <div className="text-center py-20 glass-card rounded-xl">
               <p className="text-muted font-inter">
                 {locale === 'fr' ? 'Aucune reference disponible pour le moment.' : 'No references available yet.'}
               </p>
             </div>
-          </AnimatedSection>
+          </div>
         </section>
       )}
     </div>
