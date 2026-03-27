@@ -85,7 +85,7 @@ interface EditorialSection {
 function parseEditorial(description: string, childNames: string[] = []): EditorialSection[] {
   const sections: EditorialSection[] = []
   // Clean garbage "n" chars left from bad \n escaping during WordPress import
-  let cleaned = description.replace(/\nn{3,}/g, '\n')
+  let cleaned = description.replace(/\nn{3,}/g, '\n').replace(/^n+/, '')
 
   // Strip structured data dumped from WordPress (subcategories, featured drinks, table rows)
   // These were part of the WP page but are now rendered from DB queries
