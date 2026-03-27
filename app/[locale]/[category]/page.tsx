@@ -82,10 +82,45 @@ interface EditorialSection {
   content: string
 }
 
-function parseEditorial(description: string): EditorialSection[] {
+function parseEditorial(description: string, childNames: string[] = []): EditorialSection[] {
   const sections: EditorialSection[] = []
   // Clean garbage "n" chars left from bad \n escaping during WordPress import
-  const cleaned = description.replace(/\nn{3,}/g, '\n')
+  let cleaned = description.replace(/\nn{3,}/g, '\n')
+
+  // Strip structured data dumped from WordPress (subcategories, featured drinks, table rows)
+  // These were part of the WP page but are now rendered from DB queries
+  const childNamesLower = new Set(childNames.map(n => n.toLowerCase().trim()).filter(Boolean))
+  const garbagePatterns = [
+    /Origine\s*:/,                    // Featured drink data: "Origine : Écosse"
+    /Type de \w+\s*:/,                // "Type de whisky : single malt"
+    /Âge\/millésime/,                 // "Âge/millésime du whisky"
+    /Volume d'alcool/,                // "Volume d'alcool du whisky"
+    /À la carte de \d+/,             // "À la carte de 4 restaurants"
+    /Découvrir le \w+$/,              // "Découvrir le whisky"
+    /^Marque de \w+/,                 // Old table header "Marque de whisky"
+  ]
+
+  const allLines = cleaned.split('\n')
+  const keepLines: string[] = []
+  let contentLength = 0
+
+  for (const line of allLines) {
+    const trimmed = line.trim()
+    if (!trimmed) { keepLines.push(line); continue }
+
+    // Only start stripping after we've accumulated some real content
+    if (contentLength > 100) {
+      // Check if line matches a child category name exactly
+      if (childNamesLower.has(trimmed.toLowerCase())) break
+      // Check for structured data patterns
+      if (garbagePatterns.some(p => p.test(trimmed))) break
+    }
+
+    keepLines.push(line)
+    contentLength += trimmed.length
+  }
+
+  cleaned = keepLines.join('\n')
   const lines = cleaned.split('\n')
   let current: EditorialSection = { content: '' }
 
@@ -226,7 +261,8 @@ export default async function CategoryPage({
 
   // Parse editorial content from description
   const rawDescription = translation?.description ?? ''
-  const editorialSections = parseEditorial(rawDescription)
+  const childNames = (cat.children ?? []).map(c => c.category_translations[0]?.name ?? c.slug)
+  const editorialSections = parseEditorial(rawDescription, childNames)
 
   // Extract intro paragraph (first section without heading)
   const introSection = editorialSections.length > 0 && !editorialSections[0].heading
