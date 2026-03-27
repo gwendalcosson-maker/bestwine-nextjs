@@ -136,6 +136,9 @@ function parseEditorial(description: string, childNames: string[] = []): Editori
       beforeCut.lastIndexOf('. '),
       beforeCut.lastIndexOf('! '),
       beforeCut.lastIndexOf('? '),
+      beforeCut.lastIndexOf('.\n'),
+      beforeCut.lastIndexOf('!\n'),
+      beforeCut.lastIndexOf('?\n'),
     )
     if (lastSentenceEnd > 100) {
       cleaned = beforeCut.substring(0, lastSentenceEnd + 1)
