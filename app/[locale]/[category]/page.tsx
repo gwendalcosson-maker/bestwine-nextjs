@@ -93,35 +93,59 @@ function parseEditorial(description: string, childNames: string[] = []): Editori
   // Strip structured data dumped from WordPress (subcategories, featured drinks, table rows)
   // These were part of the WP page but are now rendered from DB queries
   const childNamesLower = new Set(childNames.map(n => n.toLowerCase().trim()).filter(Boolean))
-  const garbagePatterns = [
-    /Origine\s*:/,                    // Featured drink data: "Origine : Écosse"
-    /Type de \w+\s*:/,                // "Type de whisky : single malt"
-    /Âge\/millésime/,                 // "Âge/millésime du whisky"
-    /Volume d'alcool/,                // "Volume d'alcool du whisky"
-    /À la carte de \d+/,             // "À la carte de 4 restaurants"
-    /Découvrir le \w+$/,              // "Découvrir le whisky"
-    /^Marque de \w+/,                 // Old table header "Marque de whisky"
+  // Detect and strip structured data from WP dump
+  // Strategy: find the FIRST sentence boundary before structured data starts
+  const garbageMarkers = [
+    /Origine\b[^.!?\n]{0,40}:/,      // "Origine : X" or "Origine du vin rouge : X"
+    /Type de \w+[^.!?\n]{0,20}:/,     // "Type de whisky : single malt"
+    /Âge\/millésime/,                  // "Âge/millésime du whisky"
+    /Millésime du \w/,                 // "Millésime du vin rouge"
+    /Volume d'alcool/,                 // "Volume d'alcool du whisky"
+    /À la carte de \d+/,              // "À la carte de 4 restaurants"
+    /recommandé par le restaurant/,    // "Vin rouge recommandé par le restaurant"
+    /Découvrir le \w+\s*$/,            // "Découvrir le whisky" at end of line
+    /^Marque de \w/,                   // Old table header "Marque de whisky"
+    /^Meilleures marques de \w/,       // "Meilleures marques de vin rouge"
   ]
 
-  const allLines = cleaned.split('\n')
-  const keepLines: string[] = []
-  let contentLength = 0
+  // First pass: truncate the whole text at the first garbage marker
+  const fullText = cleaned
+  let cutPosition = fullText.length
 
-  for (const line of allLines) {
-    const trimmed = line.trim()
-    if (!trimmed) { keepLines.push(line); continue }
-
-    // Only start stripping after we've accumulated some real content
-    if (contentLength > 100) {
-      // Check if line matches a child category name exactly
-      if (childNamesLower.has(trimmed.toLowerCase())) break
-      // Check for structured data patterns
-      if (garbagePatterns.some(p => p.test(trimmed))) break
+  for (const marker of garbageMarkers) {
+    const match = marker.exec(fullText)
+    if (match && match.index < cutPosition) {
+      cutPosition = match.index
     }
-
-    keepLines.push(line)
-    contentLength += trimmed.length
   }
+
+  // Also check child category names appearing as standalone words
+  for (const childName of childNames) {
+    if (!childName) continue
+    const idx = fullText.indexOf(childName)
+    // Only cut if it appears after some real content (>100 chars)
+    if (idx > 100 && idx < cutPosition) {
+      cutPosition = idx
+    }
+  }
+
+  // Trim to the last sentence boundary before the cut
+  if (cutPosition < fullText.length) {
+    const beforeCut = fullText.substring(0, cutPosition)
+    const lastSentenceEnd = Math.max(
+      beforeCut.lastIndexOf('. '),
+      beforeCut.lastIndexOf('! '),
+      beforeCut.lastIndexOf('? '),
+    )
+    if (lastSentenceEnd > 100) {
+      cleaned = beforeCut.substring(0, lastSentenceEnd + 1)
+    } else {
+      cleaned = beforeCut
+    }
+  }
+
+  const allLines = cleaned.split('\n')
+  const keepLines = allLines
 
   cleaned = keepLines.join('\n')
   const lines = cleaned.split('\n')
