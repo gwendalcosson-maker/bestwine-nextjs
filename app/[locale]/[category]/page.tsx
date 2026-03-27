@@ -84,7 +84,9 @@ interface EditorialSection {
 
 function parseEditorial(description: string): EditorialSection[] {
   const sections: EditorialSection[] = []
-  const lines = description.split('\n')
+  // Clean garbage "n" chars left from bad \n escaping during WordPress import
+  const cleaned = description.replace(/\nn{3,}/g, '\n')
+  const lines = cleaned.split('\n')
   let current: EditorialSection = { content: '' }
 
   for (const line of lines) {
